@@ -27,7 +27,7 @@ sys.path.append(os.getcwd())
 
 from helpers.database import Base
 from models.calendar_model import Calendar
-
+from models.subscribers_model import Subscriber
 
 target_metadata = Base.metadata
 
