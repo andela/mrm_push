@@ -1,18 +1,20 @@
-import os
 import uuid
-import json
-
 import requests
-from apiclient import errors
+import os
+import json
+import ast
+
+from helpers.database import db
 from flask import jsonify, request
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
 
 from config import config
 from helpers.credentials import Credentials
-from models.calendar_model import Calendar
-from models.subscribers_model import Subscriber
-from utilities.utility import (update_entity_fields, stop_channel)
+from utilities.utility import stop_channel
+from apiclient import errors
+from helpers.calendar import update_calendar
+
 
 config_name = os.getenv('APP_SETTINGS')
 push_service = FCMNotification(api_key=os.getenv('FCM_API_KEY'))
@@ -22,7 +24,6 @@ vapid_email = os.getenv("VAPID_EMAIL")
 
 notification_url = config.get(config_name).NOTIFICATION_URL
 url = config.get(config_name).CONVERGE_MRM_URL
-
 
 class PushNotification():
     def get_supported_platforms(self):
@@ -42,20 +43,16 @@ class PushNotification():
         all_rooms = requests.post(url=url, json=rooms_query, headers=headers)
 
         rooms = all_rooms.json()['data']['allRooms']['rooms']
+        selected_calendar = {}
+        selected_calendar_key = ''
         for room in rooms:
-            exact_calendar = Calendar.query.filter_by(
-                calendar_id=room['calendarId']).first()
-            if not exact_calendar:
-                calendar = Calendar(calendar_id=room['calendarId'],
-                                    firebase_token=room['firebaseToken'])
-                calendar.save()
-                continue
-
-            if exact_calendar.firebase_token != room['firebaseToken']:
-                update_entity_fields(exact_calendar,
-                                     calendar_id=room['calendarId'],
-                                     firebase_token=room['firebaseToken'])
-                exact_calendar.save()
+            for key in db.keys('*Calendar*'):
+                calendar = db.hgetall(key)
+                if calendar['calendar_id'] == room['calendarId']:
+                    selected_calendar = calendar
+                    selected_calendar_key = key
+                    break
+            update_calendar(selected_calendar, selected_calendar_key, room)
 
         data = {
             "message": "Calendars saved successfully"
@@ -71,36 +68,45 @@ class PushNotification():
             "address": notification_url
         }
         service = Credentials.set_api_credentials(self)
-        calendars = Calendar.query.all()
+        calendars = []
         channels = []
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            calendar['key'] = key
+            calendars.append(calendar)
 
         for calendar in calendars:
             request_body['id'] = str(uuid.uuid4())
-            stop_channel(service, calendar.channel_id, calendar.resource_id)
+            if not 'channel_id' in calendar.keys():
+                calendar['channel_id'] = ''
+            if not 'resource_id' in calendar.keys():
+                calendar['resource_id'] = ''
+            stop_channel(service, calendar['channel_id'], calendar['resource_id'])
 
             try:
                 channel = service.events().watch(
-                    calendarId=calendar.calendar_id,
+                    calendarId=calendar['calendar_id'],
                     body=request_body).execute()
             except errors.HttpError as error:
                 print('An error occurred', error)
                 continue
 
-            update_entity_fields(
-                calendar, channel_id=channel['id'],
-                resource_id=channel['resourceId'])
-            calendar.save()
+            db.hmset(calendar['key'], {'channel_id': channel['id'], 'resource_id': channel['resourceId']})
             channels.append(channel)
 
         response = jsonify(channels)
         return response
 
     def send_notifications(self):
-        exact_calendar = Calendar.query.filter_by(
-            resource_id=request.headers['X-Goog-Resource-Id']).first()
-        if exact_calendar.firebase_token:
+        selected_calendar = {}
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            if 'resource_id' in calendar and calendar['resource_id'] == request.headers['X-Goog-Resource-Id']:
+                selected_calendar = calendar
+                break
+        if 'firebase_token' in selected_calendar.keys():
             result = push_service.notify_single_device(
-                registration_id=exact_calendar.firebase_token,
+                registration_id=selected_calendar['firebase_token'],
                 message_body="success")
             return jsonify(result)
 
@@ -145,15 +151,25 @@ class PushNotification():
             message_body=calendar_id)
 
     def send_notifications_to_subscribers(self):
-        calendar = Calendar.query.filter_by(
-            resource_id=request.headers['X-Goog-Resource-Id']).first()
-        calendar_id = calendar.calendar_id
-        subscribers = Subscriber.query.filter(Subscriber.calendars.any(
-            calendar_id=calendar_id)).all()
+        calendar = {}
+        calendar_id = ''
+        for key in db.keys('*Calendar*'):
+            each_calendar = db.hgetall(key)
+            if 'resource_id' in each_calendar and each_calendar['resource_id'] == request.headers['X-Goog-Resource-Id']:
+                calendar = each_calendar
+                calendar_id = each_calendar['calendar_id']
+                break
+        subscribers = []
+        for subscriber_key in db.keys('*Subscriber*'):
+            each_subscriber = db.hmget(subscriber_key, 'calendars')[0]
+            each_subscriber = ast.literal_eval(each_subscriber)
+            matching_subscribers = list(filter(lambda x: x['calendar_id'] == calendar_id, each_subscriber))
+            if len(matching_subscribers):
+                subscribers.append(db.hgetall(subscriber_key))
         supported_platforms = self.get_supported_platforms()
         for subscriber in subscribers:
-            platform = subscriber.platform
-            subscriber_url = subscriber.subscription_info
+            platform = subscriber['platform']
+            subscriber_url = subscriber['subscription_info']
             supported_platforms[platform](subscriber_url, calendar_id)
 
     def subscribe(self, subscriber_info):
@@ -162,22 +178,37 @@ class PushNotification():
             return "We currently do not support this platform"
         if subscriber_info["platform"] == "web":
             subscriber_info["subscription_info"] = json.dumps(subscriber_info["subscription_info"])
-        calendar_ids = subscriber_info.get("calendars")
-        if not calendar_ids:
-            calendars = Calendar.query.all()
-            calendar_ids = [calendar.id for calendar in calendars]
+        subscriber_calendar_ids = subscriber_info.get("calendars")
+        calendar_ids = subscriber_calendar_ids
+        if not subscriber_calendar_ids:    
+            calendar_ids = []
+            for key in db.keys('*Calendar*'):
+                calendar = db.hgetall(key)
+                calendar_ids.append(key)
 
         subscriber_key = str(uuid.uuid4())
         subscriber_info["subscriber_key"] = subscriber_key
-        subscriber = Subscriber(
-            platform=subscriber_info["platform"],
-            subscription_info=subscriber_info["subscription_info"],
-            subscribed=True,
-            subscriber_key=subscriber_key
-        )
+        subscriber_details = {'platform': subscriber_info["platform"], 'subscription_info': subscriber_info["subscription_info"], "subscribed": "True", "subscriber_key": subscriber_key}
+        key = len(db.keys('*Subscriber*')) + 1
+        db.hmset('Subscriber:' + str(key), subscriber_details)
+        calendars = []
         for calendar_id in calendar_ids:
-            calendar = Calendar.query.filter_by(id=calendar_id).first()
-            subscriber.calendars.append(calendar)
-        subscriber.save()
+            calendar = {}
+            for calendar_key in db.keys('*Calendar*'):
+                each_calendar = db.hgetall(calendar_key)
+                if each_calendar['calendar_id'] == calendar_id:
+                    calendar = each_calendar
+                    subscibers_list = []
+                    if 'subscribers_list' in calendar.keys():
+                        subscibers_list = calendar['subscribers_list'].strip('"')
+                        subscibers_list = ast.literal_eval(subscibers_list)
+                        subscibers_list.append(subscriber_details)
+                    else:
+                        subscibers_list.append(subscriber_details)
+                    db.hmset(calendar_key, {'subscribers_list': str(subscibers_list)})
+                    calendar = db.hgetall(calendar_key)
+                    calendars.append(calendar)
+                    break
+        db.hmset('Subscriber:' + str(key), {'calendars': str(calendars)})
 
         return subscriber_info
