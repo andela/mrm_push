@@ -37,7 +37,7 @@ class api_test_case(unittest.TestCase):
     @patch("requests.post", spec=True)
     def test_send_graphql_notification(self, mock_request):
         PushNotification().send_graphql_notification("url", "calendar_id")
-        mock_request.assert_called_with(json={'mutation': "{mrmNotification(calendar_id: 'calendar_id')}"}, url='url')
+        mock_request.assert_called_with(json={'query': 'mutation{mrmNotification(calendarId:"calendar_id"){message}}'}, url='url')
 
 
 if __name__ == "__main__":
