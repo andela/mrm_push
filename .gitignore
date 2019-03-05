@@ -119,3 +119,7 @@ html_coverage_report/
 
 # credentials
 credentials.json
+
+#logs
+service.err.log
+service.out.log
