@@ -1,0 +1,234 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+
+# create credentials files
+decode_credentials: &decode_credentials
+  run:
+    name: Decode Credentials
+    command: |
+      touch credentials.json
+      echo $CREDENTIALS | base64 --decode >> credentials.json
+defaults: &defaults
+  docker:
+    # specify the version you desire here
+    # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+    - image: circleci/python:3.6.1
+      environment:
+        APP_SETTING: testing
+        TEST_DATABASE_URL: postgresql://postgres@localhost/mrm_test_db
+    - image: circleci/redis
+
+# setup gcloud
+gcloud_setup: &gcloud_setup
+  run:
+    name: setup gcloud
+    command: |
+      # install 
+      sudo curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /tmp/google-cloud-sdk.tar.gz
+      sudo mkdir -p /usr/local/gcloud 
+      sudo tar -C /usr/local/gcloud -xvf /tmp/google-cloud-sdk.tar.gz
+      sudo /usr/local/gcloud/google-cloud-sdk/install.sh --quiet
+      echo PATH=$PATH:/usr/local/gcloud/google-cloud-sdk/bin >> ~/.bashrc
+      # store Service Account Key into file
+      echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+      # Authenticate on gcloud
+      export PATH=$PATH:/usr/local/gcloud/google-cloud-sdk/bin
+      gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+      gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+      gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+set_workspace: &set_workspace
+  working_directory: ~/repo
+
+restore_the_cache: &restore_the_cache
+  restore_cache:
+    keys:
+    - v1-dependencies-{{ checksum "requirements.txt" }}
+    # fallback to using the latest cache if no exact match is found
+    - v1-dependencies-
+
+# setup codeclimate
+cc_setup: &cc_setup
+  run:
+    name: Setup code climate test-reporter
+    command: |
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+      chmod +x ./cc-test-reporter
+#install dependencies
+install_dependencies: &install_dependencies
+  run:
+    name: install dependencies
+    command: |
+      python -m venv venv
+      . venv/bin/activate
+      pip install -r requirements.txt
+#save cache
+save_the_cache: &save_the_cache
+  save_cache:
+    paths:
+      - ./venv
+    key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+#notifications to slack
+notify_success: &notify_success
+  run:
+    name: Notifying slack channel (succeeded)
+    when: on_success
+    command: |
+      bash ~/repo/.circleci/notify_slack.sh success
+notify_failure: &notify_failure
+  run:
+    name: Notifying slack channel (failed)
+    when: on_fail
+    command: |
+      bash ~/repo/.circleci/notify_slack.sh fail
+version: 2
+jobs:
+  unit-tests:
+    <<: *defaults
+    <<: *set_workspace
+
+    steps:
+      - checkout
+      - *decode_credentials
+      - *gcloud_setup
+      - *restore_the_cache
+      - *install_dependencies
+      - *save_the_cache
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            pytest
+      - *notify_success
+      - *notify_failure
+
+  build_docker_image:
+    <<: *defaults
+    <<: *set_workspace
+
+    steps:
+      - checkout
+      - *decode_credentials
+      - *gcloud_setup
+
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: create environment variables
+          command: |
+            echo "APP_SETTINGS"=$(echo $IMAGE_APP_SETTINGS) >> .env
+            if [ "$CIRCLE_BRANCH" == master ]; then
+              echo "CONVERGE_MRM_URL"=$(echo $IMAGE_CONVERGE_MRM_URL_PRODUCTION) >> .env
+              echo "PROD_REDIS_URL"=$(echo $IMAGE_PROD_REDIS_URL_PRODUCTION) >> .env
+              echo "NOTIFICATION_URL"=$(echo $IMAGE_NOTIFICATION_URL_PRODUCTION) >> .env
+            elif [ "$CIRCLE_BRANCH" == develop ]; then
+              echo "CONVERGE_MRM_URL"=$(echo $IMAGE_CONVERGE_MRM_URL_STAGING) >> .env
+              echo "PROD_REDIS_URL"=$(echo $IMAGE_PROD_REDIS_URL_STAGING) >> .env
+              echo "NOTIFICATION_URL"=$(echo $IMAGE_NOTIFICATION_URL_STAGING) >> .env
+            else
+              echo "CONVERGE_MRM_URL"=$(echo $IMAGE_CONVERGE_MRM_URL_SANDBOX) >> .env
+              echo "PROD_REDIS_URL"=$(echo $IMAGE_PROD_REDIS_URL_SANDBOX) >> .env
+              echo "NOTIFICATION_URL"=$(echo $IMAGE_NOTIFICATION_URL_SANDBOX) >> .env
+            fi
+            echo "SECRET_KEY"=$(echo $IMAGE_API_KEY) >> .env
+            echo "FCM_API_KEY"=$(echo $IMAGE_FCM_API_KEY) >> .env
+            echo "API_KEY"=$(echo $IMAGE_API_KEY) >> .env
+            echo "OOATH2_CLIENT_ID"=$(echo $IMAGE_OOATH2_CLIENT_ID) >> .env
+            echo "OOATH2_CLIENT_SECRET"=$(echo $IMAGE_OOATH2_CLIENT_SECRET) >> .env
+            echo "USER_TOKEN"=$(echo $IMAGE_USER_TOKEN) >> .env
+            echo "VAPID_EMAIL"=$(echo $IMAGE_VAPID_EMAIL) >> .env
+            echo "VAPID_PRIVATE_KEY"=$(echo $IMAGE_VAPID_PRIVATE_KEY) >> .env
+            echo "VAPID_PUBLIC_KEY"=$(echo $IMAGE_VAPID_PUBLIC_KEY) >> .env
+      - run:
+          name: build backend docker image
+          command: |
+            export PATH=$PATH:/usr/local/gcloud/google-cloud-sdk/bin
+            ls -la
+            GIT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)
+            if [ "$CIRCLE_BRANCH" == master ]; then
+              docker login -u _json_key -p "$(echo $GOOGLE_CREDENTIALS_STAGING | base64 --decode )" https://gcr.io
+              docker build -f docker/prod/Dockerfile -t ${PRODUCTION_MICROSERVICE_IMAGE}:$GIT_HASH .
+              docker push ${PRODUCTION_MICROSERVICE_IMAGE}:$GIT_HASH
+              touch current_version
+              echo ${GIT_HASH} > current_version
+              gsutil cp current_version gs://${PRODUCTION_MICROSERVICE_IMAGE_VERSION_PATH}
+            elif [ "$CIRCLE_BRANCH" == develop ]; then
+              docker login -u _json_key -p "$(echo $GOOGLE_CREDENTIALS_STAGING | base64 --decode )" https://gcr.io
+              docker build -f docker/prod/Dockerfile -t ${STAGING_MICROSERVICE_IMAGE}:$GIT_HASH .
+              docker push ${STAGING_MICROSERVICE_IMAGE}:$GIT_HASH
+              touch current_version
+              echo ${GIT_HASH} > current_version
+              gsutil cp current_version gs://${STAGING_MICROSERVICE_IMAGE_VERSION_PATH}
+            else
+              echo $GOOGLE_CREDENTIALS_SANDBOX | base64 --decode > ${HOME}/gcloud-service-key.json
+              gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+              gcloud --quiet config set project ${GOOGLE_PROJECT_ID_SANDBOX}
+              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+              docker login -u _json_key -p "$(echo $GOOGLE_CREDENTIALS_SANDBOX | base64 --decode )" https://gcr.io
+              docker build -f docker/prod/Dockerfile -t ${SANDBOX_MICROSERVICE_IMAGE}:$GIT_HASH .
+              docker push ${SANDBOX_MICROSERVICE_IMAGE}:$GIT_HASH
+              touch current_version
+              echo ${GIT_HASH} > current_version
+              gsutil cp current_version gs://${SANDBOX_MICROSERVICE_IMAGE_VERSION_PATH}
+            fi
+      - *notify_success
+      - *notify_failure
+  deploy-job:
+    docker:
+      - image: ${CIRCLECI_IMAGE}
+        auth:
+          username: _json_key
+          password: ${GOOGLE_CREDS}
+        environment:
+          GOOGLE_APPLICATION_CREDENTIALS: ${HOME}/google-service-key.json
+    <<: *set_workspace
+
+    steps:
+      - checkout
+      - run:
+          name: setup gcloud
+          command: |
+            if [ "$CIRCLE_BRANCH" == master ] || [ "$CIRCLE_BRANCH" == develop ]; then
+              touch google-service-key.json
+              echo $GOOGLE_CREDENTIALS_STAGING | base64 --decode >> google-service-key.json 
+              gcloud auth activate-service-account --key-file google-service-key.json
+              gcloud --quiet config set project ${GOOGLE_PROJECT_ID_STAGING}
+              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+            else
+              touch google-service-key.json
+              echo $GOOGLE_CREDENTIALS_SANDBOX | base64 --decode >> google-service-key.json 
+              gcloud auth activate-service-account --key-file google-service-key.json
+              gcloud --quiet config set project ${GOOGLE_PROJECT_ID_SANDBOX}
+              gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+            fi
+      - run:
+          name: Deploy to kubernetes
+          command: |
+            . .circleci/deploy_service_to_kubernetes.sh
+      - *notify_success
+      - *notify_failure
+workflows:
+  version: 2
+  build-then-deploy:
+    jobs:
+      - unit-tests
+      - build_docker_image:
+          requires:
+            - unit-tests
+          filters:
+            branches:
+              only:
+                - ch-microsrvice-pipeline-164356223
+                - develop
+                - master
+      - deploy-job:
+          requires:
+            - build_docker_image
+          filters:
+            branches:
+              only:
+                - ch-microsrvice-pipeline-164356223
+                - develop
+                - master
