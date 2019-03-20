@@ -22,7 +22,6 @@ def create_app(config_name):
         PushNotification().send_notifications_to_subscribers()
         return PushNotification.send_notifications(PushNotification)
 
-
     @app.route("/channels", methods=['POST', 'GET'])
     def create_channels():
         return PushNotification.create_channels(PushNotification)
@@ -30,6 +29,10 @@ def create_app(config_name):
     @app.route("/refresh", methods=['POST', 'GET'])
     def refresh():
         return PushNotification.refresh(PushNotification)
+
+    @app.route("/get_notifications", methods=['GET'])
+    def get_notifications():
+        return PushNotification().get_notifications()
 
     @app.route("/subscription", methods=['POST', 'GET'])
     def subscribe():
@@ -43,4 +46,3 @@ def create_app(config_name):
         return Response(status=201, response=json.dumps(subscription))
 
     return app
-

@@ -5,13 +5,13 @@ import json
 import ast
 
 from helpers.database import db
-from flask import jsonify, request
+from flask import jsonify, request, render_template
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
 
 from config import config
 from helpers.credentials import Credentials
-from utilities.utility import stop_channel
+from utilities.utility import stop_channel, save_to_db
 from apiclient import errors
 from helpers.calendar import update_calendar
 
@@ -25,6 +25,7 @@ vapid_email = os.getenv("VAPID_EMAIL")
 notification_url = config.get(config_name).NOTIFICATION_URL
 url = config.get(config_name).CONVERGE_MRM_URL
 
+
 class PushNotification():
     def get_supported_platforms(self):
         supported_platforms = {
@@ -33,7 +34,6 @@ class PushNotification():
             "rest": self.send_rest_notification,
             "android": self.send_android_notification
         }
-
         return supported_platforms
 
     def refresh(self):
@@ -105,10 +105,15 @@ class PushNotification():
                 selected_calendar = calendar
                 break
         if 'firebase_token' in selected_calendar.keys():
-            result = push_service.notify_single_device(
+            results = push_service.notify_single_device(
                 registration_id=selected_calendar['firebase_token'],
                 message_body="success")
-            return jsonify(result)
+            result = {}
+            result['results'] = results['results']
+            result['subscriber_info'] = selected_calendar['firebase_token']
+            result['platform'] = 'android'
+            save_to_db(result)
+            return jsonify(results)
 
         data = {
             "message": "Notification received but no registered device"
@@ -117,10 +122,10 @@ class PushNotification():
 
         return response
 
-    def send_web_notification(self, subscription_info, calendar_id):
-        subscription_info = json.loads(subscription_info)
+    def send_web_notification(self, subscriber, calendar_id):
+        subscription_info = json.loads(subscriber['subscription_info'])
         try:
-            webpush(
+            data = webpush(
                 subscription_info=subscription_info,
                 data=str(calendar_id),
                 vapid_private_key=vapid_private_key,
@@ -128,12 +133,18 @@ class PushNotification():
                     "sub": "mailto:" + vapid_email
                 }
             )
+            result = {}
+            result['results'] = data.status_code
+            result['platform'] = subscriber['platform']
+            result['subscriber_info'] = subscriber['subscriber_key']
+            save_to_db(result)
         except WebPushException as exception:
             print(exception)
 
     def send_rest_notification(self, subscriber_url, calendar_id):
         try:
-            requests.post(url=subscriber_url, json=calendar_id)
+            result = requests.post(url=subscriber_url, json=calendar_id)
+            save_to_db(result)
         except Exception as e:
             print(e)
 
@@ -141,14 +152,20 @@ class PushNotification():
         calendar_id = str(calendar_id)
         notification_mutation = "mutation{mrmNotification(calendarId:\"" + calendar_id + "\"){message}}"
         try:
-            requests.post(url=subscriber_url, json={'query': notification_mutation})
+            result = requests.post(url=subscriber_url, json={'query': notification_mutation})
+            save_to_db(result)
         except Exception as e:
             print(e)
 
     def send_android_notification(self, firebase_token, calendar_id):
-        push_service.notify_single_device(
+        results = push_service.notify_single_device(
             registration_id=firebase_token,
             message_body=calendar_id)
+        result = {}
+        result['results'] = results['results']
+        result['subscriber_info'] = firebase_token
+        result['platform'] = 'android'
+        save_to_db(result)
 
     def send_notifications_to_subscribers(self):
         calendar = {}
@@ -163,14 +180,13 @@ class PushNotification():
         for subscriber_key in db.keys('*Subscriber*'):
             each_subscriber = db.hmget(subscriber_key, 'calendars')[0]
             each_subscriber = ast.literal_eval(each_subscriber)
-            matching_subscribers = list(filter(lambda x: x['calendar_id'] == calendar_id, each_subscriber))
+            matching_subscribers = list(filter(lambda x: x == calendar_id, each_subscriber))
             if len(matching_subscribers):
                 subscribers.append(db.hgetall(subscriber_key))
         supported_platforms = self.get_supported_platforms()
         for subscriber in subscribers:
             platform = subscriber['platform']
-            subscriber_url = subscriber['subscription_info']
-            supported_platforms[platform](subscriber_url, calendar_id)
+            return supported_platforms[platform](subscriber, calendar_id)
 
     def subscribe(self, subscriber_info):
         suported_platforms = self.get_supported_platforms().keys()
@@ -210,5 +226,14 @@ class PushNotification():
                     calendars.append(calendar)
                     break
         db.hmset('Subscriber:' + str(key), {'calendars': str(calendars)})
-
         return subscriber_info
+
+    def get_notifications(self):
+        notifications = []
+        for key in db.keys('*Notification*'):
+            notification = db.hgetall(key)
+            notifications.append(notification)
+        return render_template(
+            'log.html',
+            result=notifications
+        )
