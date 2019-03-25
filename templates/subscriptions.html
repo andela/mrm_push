@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="./styles/index.css">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
     <title>Converge push</title>
 </head>
 
 <body>
 	<div id='Wrapper'>
 		<div id='topWrapper'>
+			<a href="/subscribers">Subscribers</a>
 		</div>
 		<div id='middleWrapper'>	
 			<form action="" id="subscriber">
@@ -34,6 +35,6 @@
 	</div>   	
 </body>
 </div>
-<script src='./js/index.js'></script>
+<script src='{{ url_for('static', filename='js/index.js') }}'></script>
 </body>
 </html>

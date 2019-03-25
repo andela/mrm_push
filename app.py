@@ -3,6 +3,7 @@ from flask_json import FlaskJSON
 from flask_cors import CORS
 from config import config
 from service.push_notification import PushNotification
+from service.subscribers import Subscriber
 import os
 import json
 
@@ -23,7 +24,14 @@ def create_app(config_name):
     @app.route("/notifications", methods=['POST', 'GET'])
     def calendar_notifications():
         PushNotification().send_notifications_to_subscribers()
-        return PushNotification.send_notifications(PushNotification)
+        return PushNotification().send_notifications()
+
+    @app.route("/get_notifications", methods=['GET'])
+    def get_notifications():
+        subscriber_key = request.args.to_dict().get('key') 
+        return PushNotification().get_notifications(
+            subscriber_key=subscriber_key
+        )
 
     @app.route("/channels", methods=['POST', 'GET'])
     def create_channels():
@@ -33,9 +41,29 @@ def create_app(config_name):
     def refresh():
         return PushNotification.refresh(PushNotification)
 
-    @app.route("/get_notifications", methods=['GET'])
-    def get_notifications():
-        return PushNotification().get_notifications()
+    @app.route("/subscribers", methods=['GET'])
+    def subscribers():
+        return Subscriber().subscribers()
+
+    @app.route("/delete_subscribers", methods=['DELETE'])
+    def delete_subscribers():
+        subscriber_key = request.get_json()['key']
+        return Subscriber().delete_subscribers(
+            subscriber_key=subscriber_key
+        )
+
+    @app.route("/edit_subscribers", methods=['PUT'])
+    def edit_subscribers():
+        subscriber_key = request.args.to_dict().get('key')
+        subscriber_info = request.get_json()['subscriber_info']
+        subscribers = Subscriber().edit_subscribers(
+            subscriber_info, subscriber_key=subscriber_key
+        )
+        return Response(status=200, response=subscribers)
+
+    @app.route("/subscription/new", methods=['GET'])
+    def new_subscription():
+        return render_template('subscriptions.html')
 
     @app.route("/subscription", methods=['POST', 'GET'])
     def subscribe():

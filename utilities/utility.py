@@ -1,7 +1,6 @@
 import datetime
-
 from apiclient import errors
-from flask import render_template
+from collections import OrderedDict 
 from helpers.database import db
 
 
@@ -30,8 +29,10 @@ def save_to_db(*args):
     result['time'] = datetime.datetime.now().replace(
                 second=0, microsecond=0
             )
+    notification_details = OrderedDict()
     notification_details = {'time': str(result['time']),
                             'results': str(result['results']),
+                            'subscriber_key': str(result['subscriber_key']),
                             'subscriber_info': str(result['subscriber_info']),
                             'platform': str(result['platform'])
                             }

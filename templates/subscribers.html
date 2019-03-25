@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/subscribers.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/modal.css') }}">
+	<title>Converge push</title>
+	
+</head>
+
+<body>
+	<div id='table-wrapper'>
+		<div id='topWrapper'>
+			<a href="/subscription/new">Subscribe</a>
+		</div>
+		<div id='middleWrapper'>	
+			<h2>Subscribers</h2>
+			<p id="responseMsg"></p>
+		<table id="subscribers-table">
+        <tr>
+          <th>Platform</th>
+					<th>Subscribed</th>
+					<th>Subscriber Info</th>
+					<th>Subscriber Key</th>
+					<th>Action</th>
+					<th>Push  Notification Links</th>
+         </tr>
+		  {% for item in result%}
+
+          <tr id="row-{{item.subscriber_key}}" class="tableItems">
+            
+				<td>{{item.platform}}</td> 
+				<td>{{item.subscribed}}</td> 
+				<td>{{item.subscription_info}}</td> 
+				<td>{{item.subscriber_key}}</td> 
+			
+			<td>
+			<div class="btn">
+					<button onclick="modalOpener({{item}})">Edit</button>	
+					<button value="{{item.subscriber_key}}" onclick="deleteSubscriber(event)">Delete</button>		  
+		
+				</div>
+			  </td>
+			  <td><a href="/get_notifications?key={{item.subscriber_key}}"> Link</a></td>
+		  </tr> 
+
+          {% endfor %}
+      </table>
+	</div>
+	
+    <div id='bottomWrapper'></div>
+
+		</div>
+	</div>   	
+</body>
+</div>
+<!-- The Modal -->
+<div id="editModal" class="modal">
+	<!-- Modal content -->
+	<div class="modal-content">
+		<span class="close">&times;</span>
+		<form id="subscriber">
+				<h2>Edit subscriber</h2>
+				<div id="responseDiv"></div>
+				<label for="platform">Platform</label>
+				<select name="platform" id="platform" onchange="handleEditChange(event)">
+					<option value="android">android</option>
+					<option value="graphql">graphql</option>
+					<option value="rest">rest</option>
+					<option value="web">web</option>
+				</select>
+				<label for="subscription_info">Subscriber Info</label>
+				<input
+					onkeyup="handleEditChange(event)"
+					type="text"
+					id="subscription_info"
+					name="subscription_info"
+					placeholder="Subscriber Info" required>
+				<input type="button" onclick="editSubscriber(event)" value="Submit">
+			</form>
+	</div>
+
+</div>
+
+<script src='{{ url_for('static', filename='js/subscribers.js') }}'></script>
+</body>
+</html>

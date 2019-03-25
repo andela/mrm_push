@@ -208,6 +208,10 @@ coverage run -m pytest
 | http://127.0.0.1:5000/notifications| This is the endpoint that is hit by the Google calendar API. |
 | http://127.0.0.1:5000/refresh|This will update the events in Backend database with the ones in the calendar API. |
 | http://127.0.0.1:5000/channels|This will create notification channels for the rooms on the database using the room's calender_id. |
+| http://127.0.0.1:5000/get_notifications|This will return all the notifications available for a specific channel |
+| http://127.0.0.1:5000/subscribers|This will return all the susbcribers available for a specific channel |
+| http://127.0.0.1:5000/edit_subscribers?key=subscriber_key|This will allow a user to edit a subscriber's info. |
+| http://127.0.0.1:5000/delete_subscribers?key=subscriber_key|This will delete a subscriber.|
 
 # Subscription
 * You hit this endpoint with the following body

@@ -8,6 +8,7 @@ from helpers.database import db
 from flask import jsonify, request, render_template
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
+from collections import OrderedDict 
 
 from config import config
 from helpers.credentials import Credentials
@@ -99,6 +100,9 @@ class PushNotification():
 
     def send_notifications(self):
         selected_calendar = {}
+        subscriber = {}
+        for key in db.keys('*Subscriber*'):
+            subscriber = db.hgetall(key)
         for key in db.keys('*Calendar*'):
             calendar = db.hgetall(key)
             if 'resource_id' in calendar and calendar['resource_id'] == request.headers['X-Goog-Resource-Id']:
@@ -107,9 +111,10 @@ class PushNotification():
         if 'firebase_token' in selected_calendar.keys():
             results = push_service.notify_single_device(
                 registration_id=selected_calendar['firebase_token'],
-                message_body="success")
-            result = {}
+                message_body="success")  
+            result = OrderedDict()
             result['results'] = results['results']
+            result['subscriber_key'] = subscriber['subscriber_key']
             result['subscriber_info'] = selected_calendar['firebase_token']
             result['platform'] = 'android'
             save_to_db(result)
@@ -180,7 +185,7 @@ class PushNotification():
         for subscriber_key in db.keys('*Subscriber*'):
             each_subscriber = db.hmget(subscriber_key, 'calendars')[0]
             each_subscriber = ast.literal_eval(each_subscriber)
-            matching_subscribers = list(filter(lambda x: x == calendar_id, each_subscriber))
+            matching_subscribers = list(filter(lambda x: x['calendarId'] == calendar_id, each_subscriber))
             if len(matching_subscribers):
                 subscribers.append(db.hgetall(subscriber_key))
         supported_platforms = self.get_supported_platforms()
@@ -192,8 +197,7 @@ class PushNotification():
         suported_platforms = self.get_supported_platforms().keys()
         if not subscriber_info["platform"] in suported_platforms:
             return "We currently do not support this platform"
-        if subscriber_info["platform"] == "web":
-            subscriber_info["subscription_info"] = json.dumps(subscriber_info["subscription_info"])
+        subscriber_info["subscription_info"] = json.dumps(subscriber_info["subscription_info"])
         subscriber_calendar_ids = subscriber_info.get("calendars")
         calendar_ids = subscriber_calendar_ids
         if not subscriber_calendar_ids:    
@@ -217,7 +221,7 @@ class PushNotification():
                     subscibers_list = []
                     if 'subscribers_list' in calendar.keys():
                         subscibers_list = calendar['subscribers_list'].strip('"')
-                        subscibers_list = ast.literal_eval(subscibers_list)
+                        subscibers_list = ast.literal_eval(subscibers_list)                    
                         subscibers_list.append(subscriber_details)
                     else:
                         subscibers_list.append(subscriber_details)
@@ -228,11 +232,14 @@ class PushNotification():
         db.hmset('Subscriber:' + str(key), {'calendars': str(calendars)})
         return subscriber_info
 
-    def get_notifications(self):
+    def get_notifications(self, subscriber_key=None):
         notifications = []
         for key in db.keys('*Notification*'):
             notification = db.hgetall(key)
-            notifications.append(notification)
+            if 'subscriber_info' in notification.keys() and subscriber_key == notification['subscriber_info']:
+                notifications.append(notification)
+            elif not subscriber_key:
+                notifications.append(notification)
         return render_template(
             'log.html',
             result=notifications
