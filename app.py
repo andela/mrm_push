@@ -20,18 +20,19 @@ def create_app(config_name):
     def index():
         return render_template('index.html')
 
-    @app.route("/notifications", methods=['POST', 'GET'])
-    def calendar_notifications():
-        PushNotification().send_notifications_to_subscribers()
+    @app.route("/notifications/<string:subscriber_key>", methods=['POST', 'GET'])
+    def calendar_notifications(subscriber_key):
+        PushNotification().send_notifications_to_subscribers(subscriber_key)
         return PushNotification.send_notifications(PushNotification)
 
     @app.route("/channels", methods=['POST', 'GET'])
     def create_channels():
         return PushNotification.create_channels(PushNotification)
 
-    @app.route("/refresh", methods=['POST', 'GET'])
+    @app.route("/refresh", methods=['POST'])
     def refresh():
-        return PushNotification.refresh(PushNotification)
+        subscriber_key = request.args.to_dict().get('subscriber_key')
+        return PushNotification().refresh(subscriber_key=subscriber_key)
 
     @app.route("/get_notifications", methods=['GET'])
     def get_notifications():
@@ -40,7 +41,8 @@ def create_app(config_name):
     @app.route("/subscription", methods=['POST', 'GET'])
     def subscribe():
         if request.method == "GET":
-            return Response(response=json.dumps({"public_key": vapid_public_key}),
+            return Response(response=json.dumps(
+                        {"public_key": vapid_public_key}),
                             headers={"Access-Control-Allow-Origin": "*"},
                             content_type="application/json"
                             )

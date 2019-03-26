@@ -36,30 +36,69 @@ class PushNotification():
         }
         return supported_platforms
 
-    def refresh(self):
-        rooms_query = (
-            {"query": "{ allRooms { rooms { calendarId, firebaseToken } } }"})
-        headers = {'Authorization': 'Bearer %s' % api_token}
-        all_rooms = requests.post(url=url, json=rooms_query, headers=headers)
+    @staticmethod
+    def get_endpoint(request_data=None):
+        """ returns an endpoint that queries all subscriber rooms
+        """
+        all_endpoints = []
+        subscriber_key = request_data['subscriber_key'] if request_data else None
 
-        rooms = all_rooms.json()['data']['allRooms']['rooms']
-        selected_calendar = {}
-        selected_calendar_key = ''
+        for key in db.keys('*Subscriber*'):
+            subscribers = db.hgetall(key)
+            if subscribers['subscriber_key'] == subscriber_key:
+                return subscribers['calendar_ids_endpoint']
+
+            all_endpoints.append(subscribers['calendar_ids_endpoint'])
+        return all_endpoints
+
+    @staticmethod
+    def update_db(query, headers, sub_key=None):
+        """ updates the Radis database with calendar_ids from the converge db
+         :params
+            - query, headers, sub_key
+        """
+        all_rooms = requests.post(url=url, json={"query": query}, headers=headers)
+
+        endpoint, query_obj = query.split('{ ')[1].strip(), query.split('{ ')[2].strip()
+        rooms = all_rooms.json()['data'][endpoint][query_obj]
+
+        for key in db.keys('*Subscriber*'):
+            subscribers = db.hgetall(key)
+            if subscribers['subscriber_key'] == sub_key:
+                db.hmset(key, {'calendars': str(rooms)})
+
+        keys = db.keys('*Calendar*')
+        calendars = [(key, db.hgetall(key)) for key in keys]
+        room_calender_ids = set([room['calendarId'] for room in rooms])
+        calendar_ids = set([calendar[1]['calendar_id'] for calendar in calendars])
+
+        common_calendar_ids = room_calender_ids & calendar_ids
+        for calendar in calendars:
+            if calendar[1]['calendar_id'] in common_calendar_ids:
+                update_existing_calendars(rooms, calendar[1], key)
+
         for room in rooms:
-            for key in db.keys('*Calendar*'):
-                calendar = db.hgetall(key)
-                if calendar['calendar_id'] == room['calendarId']:
-                    selected_calendar = calendar
-                    selected_calendar_key = key
-                    break
-            update_calendar(selected_calendar, selected_calendar_key, room)
+            if room['calendarId'] not in common_calendar_ids:
+                update_calendar({}, '', room)
 
-        data = {
-            "message": "Calendars saved successfully"
-        }
-        response = jsonify(data)
+    def refresh(self, subscriber_key=None):
+        """ Called by the refresh endpoint to update the Radis database
+        both when a subscriber_key is passed and when not passed
+        """
+        headers = {'Authorization': 'Bearer %s' % api_token}
+        if subscriber_key:
+            query = PushNotification.get_endpoint(
+                request_data={'subscriber_key': subscriber_key})
+            PushNotification.update_db(query, headers, sub_key=subscriber_key)
+            return jsonify({"message": "Calendars saved successfully"})
 
-        return response
+        else:
+            queries = PushNotification.get_endpoint()
+            if not queries:
+                return jsonify({"error": "No endpoint found in database"})
+            for query in queries:
+                PushNotification.update_db(query, headers)
+            return jsonify({"message": "Calendars saved successfully"})
 
     def create_channels(self):
         request_body = {
@@ -167,26 +206,21 @@ class PushNotification():
         result['platform'] = 'android'
         save_to_db(result)
 
-    def send_notifications_to_subscribers(self):
-        calendar = {}
+    def send_notifications_to_subscribers(self, sub_key):
         calendar_id = ''
+        calendars = []
         for key in db.keys('*Calendar*'):
             each_calendar = db.hgetall(key)
             if 'resource_id' in each_calendar and each_calendar['resource_id'] == request.headers['X-Goog-Resource-Id']:
-                calendar = each_calendar
                 calendar_id = each_calendar['calendar_id']
+                calendars.append(calendar_id)
                 break
-        subscribers = []
-        for subscriber_key in db.keys('*Subscriber*'):
-            each_subscriber = db.hmget(subscriber_key, 'calendars')[0]
-            each_subscriber = ast.literal_eval(each_subscriber)
-            matching_subscribers = list(filter(lambda x: x == calendar_id, each_subscriber))
-            if len(matching_subscribers):
-                subscribers.append(db.hgetall(subscriber_key))
-        supported_platforms = self.get_supported_platforms()
-        for subscriber in subscribers:
+        if sub_key in db.keys('*Subscriber*'):
+            subscriber = db.hgetall(sub_key)
+            supported_platforms = self.get_supported_platforms()
             platform = subscriber['platform']
-            return supported_platforms[platform](subscriber, calendar_id)
+            subscriber_url = subscriber['subscription_info']
+            supported_platforms[platform](subscriber_url, calendar_id)
 
     def subscribe(self, subscriber_info):
         suported_platforms = self.get_supported_platforms().keys()
@@ -204,7 +238,12 @@ class PushNotification():
 
         subscriber_key = str(uuid.uuid4())
         subscriber_info["subscriber_key"] = subscriber_key
-        subscriber_details = {'platform': subscriber_info["platform"], 'subscription_info': subscriber_info["subscription_info"], "subscribed": "True", "subscriber_key": subscriber_key}
+        subscriber_details = {
+            "platform": subscriber_info["platform"],
+            "subscription_info": subscriber_info["subscription_info"],
+            "calendar_ids_endpoint": subscriber_info["calendar_ids_endpoint"],
+            "subscribed": "True",
+            "subscriber_key": subscriber_key}
         key = len(db.keys('*Subscriber*')) + 1
         db.hmset('Subscriber:' + str(key), subscriber_details)
         calendars = []
@@ -237,3 +276,13 @@ class PushNotification():
             'log.html',
             result=notifications
         )
+
+
+def update_existing_calendars(rooms, selected_calendar, selected_calendar_key):
+    """ Update the Redis database for already existing calendars
+         :params
+            - rooms, selected_calendar, selected_calendar_key
+         :returns: None
+    """
+    for room in rooms:
+        update_calendar(selected_calendar, selected_calendar_key, room)
