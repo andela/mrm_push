@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="google-site-verification" content="7nOT58tx-TbWUt6dokG5Yj1Chca3j5-qX5qQ4dTGVew" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+      table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+      }
+      
+      td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+      }
+      
+      tr:nth-child(even) {
+        background-color: #dddddd;
+      }
+      </style>
+      </head>
+      <body>
+      
+      <h2>Push Notification Logs</h2>
+      
+      <table>
+        <tr>
+          <th>Results</th>
+          <th>Platform</th>
+          <th>Time</th>
+          <th>Subscriber Info</th>
+
+
+          
+        </tr>
+          {% for item in result%}
+          <tr>
+            {% for value in item.values() %}
+              <td>{{value}}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+      </table>
+      
+      </body>
+      </html>
+      
+</head>
+<body>
+
+</body>
+</html>
