@@ -48,4 +48,8 @@ def create_app(config_name):
         subscription = PushNotification().subscribe(subscription_info)
         return Response(status=201, response=json.dumps(subscription))
 
+    @app.route("/googledb635995d37deb01.html", methods=['GET'])
+    def verify_push_url():
+        return render_template("googledb635995d37deb01.html")
+
     return app
