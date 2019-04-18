@@ -11,3 +11,5 @@ virtualenv==15.2.0
 pywebpush==1.8.0
 pytest==4.3.0
 redis
+ndg-httpsclient
+pyopenssl
