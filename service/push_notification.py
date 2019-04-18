@@ -68,6 +68,7 @@ class PushNotification():
             "address": notification_url
         }
         service = Credentials.set_api_credentials(self)
+        calendar = {}
         calendars = []
         channels = []
         for key in db.keys('*Calendar*'):
