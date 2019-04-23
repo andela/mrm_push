@@ -33,6 +33,12 @@ def create_app(config_name):
     def refresh():
         return PushNotification.refresh(PushNotification)
 
+    @app.route("/token", methods=['POST', 'GET'])
+    def update_firebase_token():
+        calendar_id = request.args.get('calendar_id')
+        firebase_token = request.args.get('firebase_token')
+        return PushNotification.update_firebase_token(PushNotification, calendar_id, firebase_token)
+
     @app.route("/get_notifications", methods=['GET'])
     def get_notifications():
         return PushNotification().get_notifications()
