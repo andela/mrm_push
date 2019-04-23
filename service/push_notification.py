@@ -36,6 +36,14 @@ class PushNotification():
         }
         return supported_platforms
 
+    def update_firebase_token(self, calendar_id, firebase_token):
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            if calendar['calendar_id'] == calendar_id:
+                calendar['firebase_token'] = firebase_token
+                db.hmset(key, calendar)
+        return "OK"
+
     def refresh(self):
         rooms_query = (
             {"query": "{ allRooms { rooms { calendarId, firebaseToken } } }"})
