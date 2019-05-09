@@ -246,3 +246,62 @@ class PushNotification():
             'log.html',
             result=notifications
         )
+
+    def create_channel(self, calendar_id):
+        """
+            Creates a channel for the room specified with the calendar_id to 
+            litsen to notifications.
+        """
+        request_body = {
+            "id": None,
+            "type": "web_hook",
+            "address": notification_url
+        }
+        service = Credentials.set_api_credentials(self)
+        calendar = {}
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            if calendar['calendar_id'] == calendar_id:
+                calendar['key'] = key
+        request_body['id'] = str(uuid.uuid4())
+        if not 'channel_id' in calendar.keys():
+            calendar['channel_id'] = ''
+        if not 'resource_id' in calendar.keys():
+            calendar['resource_id'] = ''
+        stop_channel(service, calendar['channel_id'], calendar['resource_id'])
+
+        try:
+            channel = service.events().watch(
+                calendarId=calendar['calendar_id'],
+                body=request_body).execute()
+        except errors.HttpError as error:
+            print('An error occurred', error)
+
+        db.hmset(calendar['key'], {'channel_id': channel['id'], 'resource_id': channel['resourceId']})
+
+        response = jsonify(channel)
+        return response
+
+    def add_room(self, calendar_id, firebase_token):
+        """
+        Method to add room to redis database and creates a channel to litsen to notifications.
+        """
+        room = {}
+        room['calendarId'] = calendar_id
+        room['firebaseToken'] = firebase_token
+        selected_calendar = {}
+        selected_calendar_key = ''
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            if calendar['calendar_id'] == room['calendarId']:
+                selected_calendar = calendar
+                selected_calendar_key = key
+                break
+        update_calendar(selected_calendar, selected_calendar_key, room)
+        self.create_channel(calendar_id)
+        data = {
+            "message": "Room added successfully."
+        }
+        response = jsonify(data)
+        return response
+
