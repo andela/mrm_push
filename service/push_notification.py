@@ -332,3 +332,28 @@ class PushNotification():
         }
         response = jsonify(data)
         return response
+
+    def delete_room(self, calendar_id):
+        """
+        Stop a room from listening for notifications
+        :params
+            calendar_id: google calendar id for specific room
+        """
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            if calendar['calendar_id'] == calendar_id:
+                service = Credentials.set_api_credentials(self)
+                stop_channel(service, calendar.get('channel_id'),
+                             calendar.get('resource_id'))
+                db.hdel(key, *calendar)
+                data = {
+                    "message": "Room stopped from listening for notifications"
+                }
+                response = jsonify(data)
+                return response
+
+        data = {
+            "message": "Room not found under notifications list"
+        }
+        response = jsonify(data)
+        return response

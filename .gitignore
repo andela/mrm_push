@@ -123,3 +123,7 @@ credentials.json
 #logs
 service.err.log
 service.out.log
+celery.err.log
+celery.out.log
+mrm.err.log
+mrm.out.log
