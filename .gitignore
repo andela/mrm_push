@@ -111,7 +111,6 @@ ENV/
 # alembic
 # alembic/
 # alembic.ini
-
 # pytests
 .pytest_cache/
 html_coverage_report/
@@ -119,7 +118,6 @@ html_coverage_report/
 
 # credentials
 credentials.json
-
 #logs
 service.err.log
 service.out.log
