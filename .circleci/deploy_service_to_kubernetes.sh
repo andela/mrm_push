@@ -5,6 +5,8 @@ checkout_deployment_scripts() {
         git clone -b master https://github.com/andela/mrm-deployment-scripts.git ${HOME}/deployments
     elif [ "$CIRCLE_BRANCH" == "develop" ]; then
         git clone -b develop https://github.com/andela/mrm-deployment-scripts.git ${HOME}/deployments
+    elif [ "$CIRCLE_BRANCH" == "qa" ]; then
+        git clone -b qa https://github.com/andela/mrm-deployment-scripts.git ${HOME}/deployments
     else
         git clone -b ch-backend-serice-entrypoint-164519743 https://github.com/andela/mrm-deployment-scripts.git ${HOME}/deployments
     fi
