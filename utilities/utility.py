@@ -2,7 +2,7 @@ import datetime
 
 from apiclient import errors
 from flask import render_template
-from helpers.database import db
+from helpers.database import db_session
 
 
 def stop_channel(service, channel_id, resource_id):
@@ -24,15 +24,24 @@ def stop_channel(service, channel_id, resource_id):
 
 def save_to_db(*args):
     """ Function to save to database."""
-    results = (args)
-    result = results[0]
-    key = len(db.keys('*Notification*')) + 1
-    result['time'] = datetime.datetime.now().replace(
-                second=0, microsecond=0
-            )
-    notification_details = {'time': str(result['time']),
-                            'results': str(result['results']),
-                            'subscriber_info': str(result['subscriber_info']),
-                            'platform': str(result['platform'])
-                            }
-    db.hmset('Notification:' + str(key), notification_details)
+    pass
+
+
+def update_entity_fields(entity, **kwargs):
+    """	
+    Function to update an entities fields	
+    :param kwargs	
+    :param entity	
+    """
+    keys = kwargs.keys()
+    for key in keys:
+        exec("entity.{0} = kwargs['{0}']".format(key))
+    return entity
+
+
+class Utility(object):
+
+    def save(self):
+        """Function for saving new objects"""
+        db_session.add(self)
+        db_session.commit()
