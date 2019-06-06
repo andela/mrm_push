@@ -108,6 +108,7 @@ class PushNotification():
 
     def send_notifications(self):
         selected_calendar = {}
+        results = {}
         for key in db.keys('*Calendar*'):
             calendar = db.hgetall(key)
             if 'resource_id' in calendar and calendar['resource_id'] == request.headers['X-Goog-Resource-Id']:
@@ -122,6 +123,23 @@ class PushNotification():
             result['subscriber_info'] = selected_calendar['firebase_token']
             result['platform'] = 'android'
             save_to_db(result)
+
+        # Send an update to the backend API
+        if 'calendar_id' in selected_calendar.keys():
+            notify_api_mutation = (
+                {
+                    'query':
+                        """
+                        mutation {
+                            mrmNotification ( calendarId: \"%s\" ) {
+                                message
+                            }
+                        }
+                        """ % selected_calendar['calendar_id']
+                }
+            )
+            headers = {'Authorization': 'Bearer %s' % api_token}
+            requests.post(url=url, json=notify_api_mutation, headers=headers)
             return jsonify(results)
 
         data = {
