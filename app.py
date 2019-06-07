@@ -22,7 +22,7 @@ def create_app(config_name):
 
     @app.route("/notifications", methods=['POST', 'GET'])
     def calendar_notifications():
-        PushNotification().send_notifications_to_subscribers()
+        # PushNotification().send_notifications_to_subscribers()
         return PushNotification.send_notifications(PushNotification)
 
     @app.route("/channels", methods=['POST', 'GET'])
