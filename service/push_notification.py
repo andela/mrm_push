@@ -5,7 +5,7 @@ import json
 import ast
 
 from helpers.database import db
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, Flask
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
 
@@ -14,6 +14,7 @@ from helpers.credentials import Credentials
 from utilities.utility import stop_channel, save_to_db
 from apiclient import errors
 from helpers.calendar import update_calendar
+import celery
 
 
 config_name = os.getenv('APP_SETTINGS')
@@ -24,6 +25,7 @@ vapid_email = os.getenv("VAPID_EMAIL")
 
 notification_url = config.get(config_name).NOTIFICATION_URL
 url = config.get(config_name).CONVERGE_MRM_URL
+app = Flask(__name__)
 
 
 class PushNotification():
@@ -43,31 +45,32 @@ class PushNotification():
                 calendar['firebase_token'] = firebase_token
                 db.hmset(key, calendar)
         return "OK"
-
+    @celery.task(name='app.see_you', bind=True)
     def refresh(self):
-        rooms_query = (
-            {"query": "{ allRooms { rooms { calendarId, firebaseToken } } }"})
-        headers = {'Authorization': 'Bearer %s' % api_token}
-        all_rooms = requests.post(url=url, json=rooms_query, headers=headers)
+        with app.test_request_context():
+            rooms_query = (
+                {"query": "{ allRooms { rooms { calendarId, firebaseToken } } }"})
+            headers = {'Authorization': 'Bearer %s' % api_token}
+            all_rooms = requests.post(url=url, json=rooms_query, headers=headers)
 
-        rooms = all_rooms.json()['data']['allRooms']['rooms']
-        selected_calendar = {}
-        selected_calendar_key = ''
-        for room in rooms:
-            for key in db.keys('*Calendar*'):
-                calendar = db.hgetall(key)
-                if calendar['calendar_id'] == room['calendarId']:
-                    selected_calendar = calendar
-                    selected_calendar_key = key
-                    break
-            update_calendar(selected_calendar, selected_calendar_key, room)
+            rooms = all_rooms.json()['data']['allRooms']['rooms']
+            selected_calendar = {}
+            selected_calendar_key = ''
+            for room in rooms:
+                for key in db.keys('*Calendar*'):
+                    calendar = db.hgetall(key)
+                    if calendar['calendar_id'] == room['calendarId']:
+                        selected_calendar = calendar
+                        selected_calendar_key = key
+                        break
+                update_calendar(selected_calendar, selected_calendar_key, room)
 
-        data = {
-            "message": "Calendars saved successfully"
-        }
-        response = jsonify(data)
+            data = {
+                "message": "Calendars saved successfully"
+            }
+            response = jsonify(data)
 
-        return response
+            return "Calendars saved successfully"
 
     def create_channels(self):
         request_body = {
