@@ -45,7 +45,7 @@ class PushNotification():
                 calendar['firebase_token'] = firebase_token
                 db.hmset(key, calendar)
         return "OK"
-    @celery.task(name='app.see_you', bind=True)
+    @celery.task(name='push_notification.refresh', bind=True)
     def refresh(self):
         with app.test_request_context():
             rooms_query = (

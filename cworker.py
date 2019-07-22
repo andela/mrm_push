@@ -10,7 +10,6 @@ app = create_app(os.getenv('APP_SETTINGS') or 'default')
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
         broker=app.config['CELERY_BROKER_URL']
     )
     celery.conf.update(app.config)
@@ -24,23 +23,14 @@ def make_celery(app):
     return celery
 
 app.config.update(
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
+    CELERY_BROKER_URL=app.config['REDIS_DATABASE_URI']
     )
 celery = make_celery(app)
 
-@celery.task(name='cworker.add_together')
-def add_together(a, b):
-    return a + b
-
-result = add_together.delay(23, 42)
-
-
 celery.conf.beat_schedule = {
-    'add-every-5-seconds': {
-        'task': 'app.see_you',
-        'schedule': 5.0,
-        'args': ()
+    'add-every-one-minute': {
+        'task': 'push_notification.refresh',
+        'schedule': crontab(),
     },
 }
 celery.conf.timezone = 'UTC'
