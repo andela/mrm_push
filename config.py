@@ -4,8 +4,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY') or 'hardtoguessstring'
-    REDIS_DATABASE_URI = os.getenv('DEV_REDIS_URL')
-    REDIS_DATABASE_URI = os.getenv('PROD_REDIS_URL')
 
     @staticmethod
     def init_app(app):
