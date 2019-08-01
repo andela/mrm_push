@@ -90,7 +90,8 @@ class PushNotification():
                 calendar['channel_id'] = ''
             if not 'resource_id' in calendar.keys():
                 calendar['resource_id'] = ''
-            stop_channel(service, calendar['channel_id'], calendar['resource_id'])
+            stop_channel(
+                service, calendar['channel_id'], calendar['resource_id'])
 
             try:
                 channel = service.events().watch(
@@ -100,7 +101,8 @@ class PushNotification():
                 print('An error occurred', error)
                 continue
 
-            db.hmset(calendar['key'], {'channel_id': channel['id'], 'resource_id': channel['resourceId']})
+            db.hmset(calendar['key'], {
+                     'channel_id': channel['id'], 'resource_id': channel['resourceId']})
             channels.append(channel)
 
         response = jsonify(channels)
@@ -159,9 +161,11 @@ class PushNotification():
 
     def send_graphql_notification(self, subscriber_url, calendar_id):
         calendar_id = str(calendar_id)
-        notification_mutation = "mutation{mrmNotification(calendarId:\"" + calendar_id + "\"){message}}"
+        notification_mutation = "mutation{mrmNotification(calendarId:\"" + \
+            calendar_id + "\"){message}}"
         try:
-            result = requests.post(url=subscriber_url, json={'query': notification_mutation})
+            result = requests.post(url=subscriber_url, json={
+                                   'query': notification_mutation})
             save_to_db(result)
         except Exception as e:
             print(e)
@@ -189,7 +193,8 @@ class PushNotification():
         for subscriber_key in db.keys('*Subscriber*'):
             each_subscriber = db.hmget(subscriber_key, 'calendars')[0]
             each_subscriber = ast.literal_eval(each_subscriber)
-            matching_subscribers = list(filter(lambda x: x == calendar_id, each_subscriber))
+            matching_subscribers = list(
+                filter(lambda x: x == calendar_id, each_subscriber))
             if len(matching_subscribers):
                 subscribers.append(db.hgetall(subscriber_key))
         supported_platforms = self.get_supported_platforms()
@@ -202,10 +207,11 @@ class PushNotification():
         if not subscriber_info["platform"] in suported_platforms:
             return "We currently do not support this platform"
         if subscriber_info["platform"] == "web":
-            subscriber_info["subscription_info"] = json.dumps(subscriber_info["subscription_info"])
+            subscriber_info["subscription_info"] = json.dumps(
+                subscriber_info["subscription_info"])
         subscriber_calendar_ids = subscriber_info.get("calendars")
         calendar_ids = subscriber_calendar_ids
-        if not subscriber_calendar_ids:    
+        if not subscriber_calendar_ids:
             calendar_ids = []
             for key in db.keys('*Calendar*'):
                 calendar = db.hgetall(key)
@@ -213,7 +219,8 @@ class PushNotification():
 
         subscriber_key = str(uuid.uuid4())
         subscriber_info["subscriber_key"] = subscriber_key
-        subscriber_details = {'platform': subscriber_info["platform"], 'subscription_info': subscriber_info["subscription_info"], "subscribed": "True", "subscriber_key": subscriber_key}
+        subscriber_details = {'platform': subscriber_info["platform"], 'subscription_info': subscriber_info[
+            "subscription_info"], "subscribed": "True", "subscriber_key": subscriber_key}
         key = len(db.keys('*Subscriber*')) + 1
         db.hmset('Subscriber:' + str(key), subscriber_details)
         calendars = []
@@ -225,12 +232,14 @@ class PushNotification():
                     calendar = each_calendar
                     subscibers_list = []
                     if 'subscribers_list' in calendar.keys():
-                        subscibers_list = calendar['subscribers_list'].strip('"')
+                        subscibers_list = calendar['subscribers_list'].strip(
+                            '"')
                         subscibers_list = ast.literal_eval(subscibers_list)
                         subscibers_list.append(subscriber_details)
                     else:
                         subscibers_list.append(subscriber_details)
-                    db.hmset(calendar_key, {'subscribers_list': str(subscibers_list)})
+                    db.hmset(calendar_key, {
+                             'subscribers_list': str(subscibers_list)})
                     calendar = db.hgetall(calendar_key)
                     calendars.append(calendar)
                     break
@@ -275,9 +284,10 @@ class PushNotification():
                 calendarId=calendar['calendar_id'],
                 body=request_body).execute()
         except errors.HttpError as error:
-            print('An error occurred', error)
+            return 'An error occured', error
 
-        db.hmset(calendar['key'], {'channel_id': channel['id'], 'resource_id': channel['resourceId']})
+        db.hmset(calendar['key'], {
+                 'channel_id': channel['id'], 'resource_id': channel['resourceId']})
 
         response = jsonify(channel)
         return response
@@ -304,4 +314,3 @@ class PushNotification():
         }
         response = jsonify(data)
         return response
-
