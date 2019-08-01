@@ -58,4 +58,10 @@ def create_app(config_name):
     def verify_push_url():
         return render_template("googledb635995d37deb01.html")
 
+    @app.route("/add_room", methods=['GET', 'POST'])
+    def add_room():
+        calendar_id = request.args.get('calendar_id')
+        firebase_token = request.args.get('firebase_token')
+        return PushNotification().add_room(calendar_id, firebase_token)
+
     return app
