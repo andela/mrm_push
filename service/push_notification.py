@@ -45,13 +45,15 @@ class PushNotification():
                 calendar['firebase_token'] = firebase_token
                 db.hmset(key, calendar)
         return "OK"
+
     @celery.task(name='push_notification.refresh', bind=True)
     def refresh(self):
         with app.test_request_context():
             rooms_query = (
                 {"query": "{ allRooms { rooms { calendarId, firebaseToken } } }"})
             headers = {'Authorization': 'Bearer %s' % api_token}
-            all_rooms = requests.post(url=url, json=rooms_query, headers=headers)
+            all_rooms = requests.post(
+                url=url, json=rooms_query, headers=headers)
 
             rooms = all_rooms.json()['data']['allRooms']['rooms']
             selected_calendar = {}
@@ -72,44 +74,46 @@ class PushNotification():
 
             return "Calendars saved successfully"
 
+    @celery.task(name='push_notification.add-channels', bind=True)
     def create_channels(self):
-        request_body = {
-            "id": None,
-            "type": "web_hook",
-            "address": notification_url
-        }
-        service = Credentials.set_api_credentials(self)
-        calendar = {}
-        calendars = []
-        channels = []
-        for key in db.keys('*Calendar*'):
-            calendar = db.hgetall(key)
-            calendar['key'] = key
-            calendars.append(calendar)
+        with app.test_request_context():
+            request_body = {
+                "id": None,
+                "type": "web_hook",
+                "address": notification_url
+            }
+            service = Credentials.set_api_credentials(self)
+            calendar = {}
+            calendars = []
+            channels = []
+            for key in db.keys('*Calendar*'):
+                calendar = db.hgetall(key)
+                calendar['key'] = key
+                calendars.append(calendar)
 
-        for calendar in calendars:
-            request_body['id'] = str(uuid.uuid4())
-            if not 'channel_id' in calendar.keys():
-                calendar['channel_id'] = ''
-            if not 'resource_id' in calendar.keys():
-                calendar['resource_id'] = ''
-            stop_channel(
-                service, calendar['channel_id'], calendar['resource_id'])
+            for calendar in calendars:
+                request_body['id'] = str(uuid.uuid4())
+                if not 'channel_id' in calendar.keys():
+                    calendar['channel_id'] = ''
+                if not 'resource_id' in calendar.keys():
+                    calendar['resource_id'] = ''
+                stop_channel(
+                    service, calendar['channel_id'], calendar['resource_id'])
 
-            try:
-                channel = service.events().watch(
-                    calendarId=calendar['calendar_id'],
-                    body=request_body).execute()
-            except errors.HttpError as error:
-                print('An error occurred', error)
-                continue
+                try:
+                    channel = service.events().watch(
+                        calendarId=calendar['calendar_id'],
+                        body=request_body).execute()
+                except errors.HttpError as error:
+                    print('An error occurred', error)
+                    continue
 
-            db.hmset(calendar['key'], {
-                     'channel_id': channel['id'], 'resource_id': channel['resourceId']})
-            channels.append(channel)
+                db.hmset(calendar['key'], {
+                    'channel_id': channel['id'], 'resource_id': channel['resourceId']})
+                channels.append(channel)
 
-        response = jsonify(channels)
-        return response
+            response = jsonify(channels)
+            return
 
     def send_notifications(self):
         selected_calendar = {}

@@ -7,6 +7,7 @@ from celery.schedules import crontab
 
 app = create_app(os.getenv('APP_SETTINGS') or 'default')
 
+
 def make_celery(app):
     celery = Celery(
         app.import_name,
@@ -22,15 +23,20 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
+
 app.config.update(
     CELERY_BROKER_URL=app.config['REDIS_DATABASE_URI']
-    )
+)
 celery = make_celery(app)
 
 celery.conf.beat_schedule = {
     'add-every-one-minute': {
         'task': 'push_notification.refresh',
-        'schedule': crontab(),
+        'schedule': crontab(minute=0, hour=0, day_of_week='sunday'),
+    },
+    'schedule-create-channels': {
+        'task': 'push_notification.add-channels',
+        'schedule': crontab(minute=0, hour=0, day_of_week='sunday'),
     },
 }
 celery.conf.timezone = 'UTC'
