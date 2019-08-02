@@ -57,6 +57,11 @@ def create_app(config_name):
     @app.route("/googledb635995d37deb01.html", methods=['GET'])
     def verify_push_url():
         return render_template("googledb635995d37deb01.html")
+    
+    @app.route("/delete_room", methods=['DELETE'])
+    def delete_room():
+        calendar_id = request.args.get('calendar_id')
+        return PushNotification().delete_room(calendar_id)
 
     @app.route("/add_room", methods=['GET', 'POST'])
     def add_room():
