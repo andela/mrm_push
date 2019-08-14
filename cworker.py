@@ -30,7 +30,7 @@ app.config.update(
 celery = make_celery(app)
 
 celery.conf.beat_schedule = {
-    'add-every-one-minute': {
+    'schedule-refresh-channels': {
         'task': 'push_notification.refresh',
         'schedule': crontab(minute=0, hour=0, day_of_week='sunday'),
     },

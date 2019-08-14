@@ -9,10 +9,14 @@ function create_sock_file {
 function run_application {
   supervisorctl start micro_service
 }
+function run_celery {
+  supervisorctl start celery
+}
 
 function main {
   create_sock_file
   run_application
+  run_celery
 }
 
 main $@
