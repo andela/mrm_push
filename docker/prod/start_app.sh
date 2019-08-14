@@ -12,9 +12,14 @@ function run_application {
   supervisorctl status
 }
 
+function run_celery {
+  supervisorctl start celery
+}
+
 function main {
   create_sock_file
   run_application
+  run_celery
 }
 
 main $@
