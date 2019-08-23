@@ -39,6 +39,7 @@ config.set_main_option('sqlalchemy.url', database_url)
 
 from api.v2.helpers.database import Base
 from api.v2.models.channels.channels_model import Channels
+from api.v2.models.bouquets.bouquets_model import Bouquets
 
 
 target_metadata = Base.metadata
