@@ -1,8 +1,7 @@
 import datetime
 
 from apiclient import errors
-from flask import render_template
-from helpers.database import db
+from ..helpers.database import db
 
 
 def stop_channel(service, channel_id, resource_id):

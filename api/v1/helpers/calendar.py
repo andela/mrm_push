@@ -1,4 +1,4 @@
-from helpers.database import db
+from .database import db
 
 
 def update_calendar(calendar, calendar_key, room):
