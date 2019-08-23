@@ -7,6 +7,8 @@ from alembic import command, config
 from app import create_app
 from api.v2.helpers.database import engine, db_session, Base
 from api.v2.models.channels.channels_model import Channels
+from api.v2.models.bouquets.bouquets_model import Bouquets
+
 
 sys.path.append(os.getcwd())
 
@@ -33,7 +35,15 @@ class BaseTestCase(TestCase):
                                calendar_id="calendar@id.com-djfirnfn",
                                resource_id="9ty4bejkkw",
                                extra_atrributes='t284nff94nf', bouquet_id=1)
+            bouquet= Bouquets(api_key1="2123",
+                              api_key2="treat44",
+                              auth_credentials='fdflfaw4', bouquet_name="Premium",
+                              should_refresh=True,
+                              refresh_url='http://localhost:5000/refresh')
+            
             channel.save()
+            bouquet.save()
+
             db_session.commit()
 
     def tearDown(self):
