@@ -124,9 +124,9 @@ class PushNotification():
             return
 
     def manual_create_channels(self):
-        PushNotification().channels()
+        self.channels(self)
         data = {
-            "message": "Channels added successfully"
+            "message": "Channels created"
         }
         response = jsonify(data)
         return response
@@ -147,6 +147,7 @@ class PushNotification():
             result['results'] = results['results']
             result['subscriber_info'] = selected_calendar['firebase_token']
             result['platform'] = 'android'
+            result['calendar_id'] = selected_calendar['calendar_id']
             save_to_db(result)
 
         # Send an update to the backend API
