@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from app import create_app
-from service.push_notification import PushNotification
+from api.v1.service.push_notification import PushNotification
 
 
 class api_test_case(unittest.TestCase):
@@ -15,7 +15,7 @@ class api_test_case(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @patch("service.push_notification.PushNotification.subscribe", spec=True)
+    @patch("api.v1.service.push_notification.PushNotification.subscribe", spec=True)
     def test_subscribe(self, mock_get_json):
         subscription_info = json.dumps({
             "subscriber_info": {
@@ -26,7 +26,7 @@ class api_test_case(unittest.TestCase):
         })
         mock_get_json.return_value = {'platform': 'web', 'subscription_info': 'url', 'calendars': [],
                                       'subscriber_key': '98261828-b45d-407e-9684-8ed22f95509d'}
-        response = self.client().post("/subscription", data=subscription_info, content_type="application/json")
+        response = self.client().post("/v1/subscription", data=subscription_info, content_type="application/json")
         self.assertEqual(response.status_code, 201)
 
     @patch("requests.post", spec=True)

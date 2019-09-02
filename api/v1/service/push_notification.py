@@ -4,16 +4,16 @@ import os
 import json
 import ast
 
-from helpers.database import db
+from ..helpers.database import db
 from flask import jsonify, request, render_template, Flask
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
 
 from config import config
-from helpers.credentials import Credentials
-from utilities.utility import stop_channel, save_to_db
+from ..helpers.credentials import Credentials
+from ..utilities.utility import stop_channel, save_to_db
 from apiclient import errors
-from helpers.calendar import update_calendar
+from ..helpers.calendar import update_calendar
 import celery
 
 
