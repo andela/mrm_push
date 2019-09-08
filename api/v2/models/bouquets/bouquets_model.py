@@ -25,11 +25,6 @@ class Bouquets(Base, Utility):
         self.api_key2 = kwargs['api_key2']
         self.auth_credentials = kwargs['auth_credentials']
 
-    def refresh_channels(self):
-        """Method for refreshing channels"""
-
-        # TODO: add functionality to refresh and check channels using the refreshUrl
-
     def register_channels(self):
         """Method for registering channels"""
 
