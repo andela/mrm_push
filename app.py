@@ -27,11 +27,11 @@ def create_app(config_name):
 
     @app.route("/channels", methods=['POST', 'GET'])
     def create_channels():
-        return PushNotification.create_channels(PushNotification)
+        return PushNotification.manual_create_channels(PushNotification)
 
     @app.route("/refresh", methods=['POST', 'GET'])
     def refresh():
-        return PushNotification.refresh(PushNotification)
+        return PushNotification.manual_refresh(PushNotification)
 
     @app.route("/token", methods=['POST', 'GET'])
     def update_firebase_token():
@@ -57,7 +57,7 @@ def create_app(config_name):
     @app.route("/googledb635995d37deb01.html", methods=['GET'])
     def verify_push_url():
         return render_template("googledb635995d37deb01.html")
-    
+
     @app.route("/delete_room", methods=['DELETE'])
     def delete_room():
         calendar_id = request.args.get('calendar_id')

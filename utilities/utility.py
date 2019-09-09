@@ -28,11 +28,12 @@ def save_to_db(*args):
     result = results[0]
     key = len(db.keys('*Notification*')) + 1
     result['time'] = datetime.datetime.now().replace(
-                second=0, microsecond=0
-            )
+        second=0, microsecond=0
+    )
     notification_details = {'time': str(result['time']),
                             'results': str(result['results']),
                             'subscriber_info': str(result['subscriber_info']),
-                            'platform': str(result['platform'])
+                            'platform': str(result['platform']),
+                            'calendar_id': str(result['calendar_id'])
                             }
     db.hmset('Notification:' + str(key), notification_details)
