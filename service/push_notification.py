@@ -124,11 +124,42 @@ class PushNotification():
             return
 
     def manual_create_channels(self):
-        self.channels(self)
-        data = {
-            "message": "Channels created"
+        request_body = {
+            "id": None,
+            "type": "web_hook",
+            "address": notification_url
         }
-        response = jsonify(data)
+        service = Credentials.set_api_credentials(self)
+        calendar = {}
+        calendars = []
+        channels = []
+        for key in db.keys('*Calendar*'):
+            calendar = db.hgetall(key)
+            calendar['key'] = key
+            calendars.append(calendar)
+
+        for calendar in calendars:
+            request_body['id'] = str(uuid.uuid4())
+            if not 'channel_id' in calendar.keys():
+                calendar['channel_id'] = ''
+            if not 'resource_id' in calendar.keys():
+                calendar['resource_id'] = ''
+            stop_channel(
+                service, calendar['channel_id'], calendar['resource_id'])
+
+            try:
+                channel = service.events().watch(
+                    calendarId=calendar['calendar_id'],
+                    body=request_body).execute()
+            except errors.HttpError as error:
+                print('An error occurred', error)
+                continue
+
+            db.hmset(calendar['key'], {
+                'channel_id': channel['id'], 'resource_id': channel['resourceId']})
+            channels.append(channel)
+
+        response = jsonify(channels)
         return response
 
     def send_notifications(self):
@@ -293,9 +324,11 @@ class PushNotification():
         for key in db.keys('*Notification*'):
             notification = db.hgetall(key)
             notifications.append(notification)
+        sorted_notification = sorted(
+            notifications, key=lambda d: str(d['time']), reverse=True)
         return render_template(
             'log.html',
-            result=notifications
+            result=sorted_notification
         )
 
     def create_channel(self, calendar_id):
