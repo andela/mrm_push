@@ -35,12 +35,13 @@ class BaseTestCase(TestCase):
                                calendar_id="calendar@id.com-djfirnfn",
                                resource_id="9ty4bejkkw",
                                extra_atrributes='t284nff94nf', bouquet_id=1)
-            bouquet= Bouquets(api_key1="2123",
-                              api_key2="treat44",
-                              auth_credentials='fdflfaw4', bouquet_name="Premium",
-                              should_refresh=True,
-                              refresh_url='http://localhost:5000/refresh')
-            
+            bouquet = Bouquets(api_key1="2123",
+                               api_key2="treat44",
+                               auth_credentials='fdflfaw4',
+                               bouquet_name="Premium",
+                               should_refresh=True,
+                               refresh_url='http://localhos:8000/mrm')
+
             channel.save()
             bouquet.save()
 
