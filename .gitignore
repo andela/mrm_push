@@ -120,6 +120,9 @@ html_coverage_report/
 # credentials
 credentials.json
 
+# binary file where snapshots saved
+dump.rdb
+
 #logs
 service.err.log
 service.out.log

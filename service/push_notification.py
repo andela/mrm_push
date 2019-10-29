@@ -5,17 +5,17 @@ import json
 import ast
 
 from helpers.database import db
-from flask import jsonify, request, render_template, Flask
+from flask import jsonify, request, render_template, Flask, Response
 from pyfcm import FCMNotification
 from pywebpush import webpush, WebPushException
 
+from .external_calls_notification import ExternalCallsNotifications
 from config import config
 from helpers.credentials import Credentials
 from utilities.utility import stop_channel, save_to_db
 from apiclient import errors
 from helpers.calendar import update_calendar
 import celery
-
 
 config_name = os.getenv('APP_SETTINGS')
 push_service = FCMNotification(api_key=os.getenv('FCM_API_KEY'))
@@ -132,9 +132,10 @@ class PushNotification():
         service = Credentials.set_api_credentials(self)
         calendar = {}
         calendars = []
-        channels = []
+        channels = [1]
         for key in db.keys('*Calendar*'):
             calendar = db.hgetall(key)
+            print(key)
             calendar['key'] = key
             calendars.append(calendar)
 
@@ -171,39 +172,22 @@ class PushNotification():
                 selected_calendar = calendar
                 break
         if 'firebase_token' in selected_calendar.keys():
-            results = push_service.notify_single_device(
-                registration_id=selected_calendar['firebase_token'],
-                message_body="success")
-            result = {}
-            result['results'] = results['results']
-            result['subscriber_info'] = selected_calendar['firebase_token']
-            result['platform'] = 'android'
-            result['calendar_id'] = selected_calendar['calendar_id']
-            save_to_db(result)
-
+            firebase_token = selected_calendar['firebase_token']
+            calendar_id = selected_calendar['calendar_id']
+            ExternalCallsNotifications.notify_device.delay(firebase_token, calendar_id)
+            
         # Send an update to the backend API
         if 'calendar_id' in selected_calendar.keys():
-            notify_api_mutation = (
-                {
-                    'query':
-                        """
-                        mutation {
-                            mrmNotification ( calendarId: \"%s\" ) {
-                                message
-                            }
-                        }
-                        """ % selected_calendar['calendar_id']
-                }
-            )
-            headers = {'Authorization': 'Bearer %s' % api_token}
-            requests.post(url=url, json=notify_api_mutation, headers=headers)
+            calendar_id = selected_calendar['calendar_id']
+            ExternalCallsNotifications.update_backend.delay(calendar_id)
+            results = {
+            "message": "Notification has been sent"
+            }
             return jsonify(results)
-
         data = {
             "message": "Notification received but no registered device"
         }
         response = jsonify(data)
-
         return response
 
     def send_web_notification(self, subscriber, calendar_id):
