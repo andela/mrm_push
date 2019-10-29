@@ -1,10 +1,8 @@
 from sqlalchemy import (Column, String, Integer, Boolean, Enum)
 from sqlalchemy.schema import Sequence
 
-
 from api.v2.helpers.database import Base
 from api.v2.utilities.utility import Utility, StateType
-
 
 class Bouquets(Base, Utility):
     __tablename__ = 'bouquets'
@@ -40,8 +38,11 @@ class Bouquets(Base, Utility):
 
         # TODO: add functionality to receive calendar notifications for purposes of logging them on the relay log table
 
-    def add_bouquet(self, bouquet_id):
+    @staticmethod
+    def add_bouquet(**kwargs):
         """Method for adding a bouquet"""
+        x = Bouquets(**kwargs)
+        x.save()
 
         # TODO: add functionality to add a bouquet on the bouquet table
 

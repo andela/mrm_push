@@ -3,7 +3,6 @@ from api.v2.helpers.database import db_session
 
 
 class Utility(object):
-
     def save(self):
         """Function for saving new objects"""
         db_session.add(self)
