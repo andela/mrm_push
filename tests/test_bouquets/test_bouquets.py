@@ -33,12 +33,13 @@ class TestBouquets(BaseTestCase):
                                       content_type='application/json')
         re = json.loads(response.data.decode())
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(re["error"], "bouquet name should have at least one character")
+        self.assertEqual(re["error"], "bouquet_name should have at least one character")
 
         # Should return 400 when no a numeral is supplied for a bouquet name instead of string
         response = self.app_test.post("/v2/bouquets", data=json.dumps(self.bouquet_400_bn_numeral),
                                       content_type='application/json')
         re = json.loads(response.data.decode())
+        print(re)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(re["error"], "bouquet name should not be numeric")
 

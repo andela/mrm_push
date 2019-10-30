@@ -31,7 +31,7 @@ class TestingConfig(Config):
     CONVERGE_MRM_URL = os.getenv('DEV_CONVERGE_MRM_URL')
     REDIS_DATABASE_URI = os.getenv('TEST_REDIS_URL')
     PUSH_DATABASE_URI = 'sqlite:///' + \
-        os.path.join(basedir, 'sqlittest-db.sqlite')
+        os.path.join(basedir, 'sqlite-test-db.sqlite')
 
 
 config = {
