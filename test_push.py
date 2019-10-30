@@ -1,11 +1,11 @@
 '''Test api endpoints'''
 import json
 import unittest
-from unittest.mock import patch
+import datetime
 
+from unittest.mock import patch
 from app import create_app
 from api.v1.service.push_notification import PushNotification
-
 
 class api_test_case(unittest.TestCase):
     def setUp(self):
@@ -38,7 +38,6 @@ class api_test_case(unittest.TestCase):
     def test_send_graphql_notification(self, mock_request):
         PushNotification().send_graphql_notification("url", "calendar_id")
         mock_request.assert_called_with(json={'query': 'mutation{mrmNotification(calendarId:"calendar_id"){message}}'}, url='url')
-
 
 if __name__ == "__main__":
     unittest.main()

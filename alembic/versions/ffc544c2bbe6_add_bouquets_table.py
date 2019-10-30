@@ -1,9 +1,7 @@
 """add bouquets table
-
 Revision ID: ffc544c2bbe6
 Revises: c5d7efe7e52c
 Create Date: 2019-09-05 20:10:43.932347
-
 """
 from alembic import op
 import sqlalchemy as sa

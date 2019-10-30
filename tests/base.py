@@ -1,5 +1,6 @@
 import os
 import sys
+import datetime
 
 from flask_testing import TestCase
 from alembic import command, config
@@ -8,7 +9,7 @@ from app import create_app
 from api.v2.helpers.database import engine, db_session, Base
 from api.v2.models.channels.channels_model import Channels
 from api.v2.models.bouquets.bouquets_model import Bouquets
-
+from api.v2.models.logs.logs_model import Logs
 
 sys.path.append(os.getcwd())
 
@@ -40,9 +41,15 @@ class BaseTestCase(TestCase):
                               auth_credentials='fdflfaw4', bouquet_name="Premium",
                               should_refresh=True,
                               refresh_url='http://localhost:5000/refresh')
-            
+            log = Logs(calendar_id = 1,
+                        subscriber_name = "request",
+                        subscription_method = "request",
+                        payload = "request",
+                        timestamp = datetime.datetime.now())
+
             channel.save()
             bouquet.save()
+            log.save()
 
             db_session.commit()
 
