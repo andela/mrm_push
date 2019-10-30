@@ -43,7 +43,6 @@ class Bouquets(Base, Utility):
         """Method for adding a bouquet"""
         x = Bouquets(**kwargs)
         x.save()
-
         # TODO: add functionality to add a bouquet on the bouquet table
 
     def delete_bouquet(self, bouquet_id):

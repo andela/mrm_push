@@ -18,4 +18,4 @@ def create_bouquet(request_data):
                               should_refresh=request_data['should_refresh'],
                               auth_credentials=request_data['auth_credentials'],
                               api_key1=request_data['api_key1'], api_key2=request_data['api_key2'])
-    return "successfully created bouquet"
+    return {'message': 'successfully added bouquet', 'bouquet': request_data}
