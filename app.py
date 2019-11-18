@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, jsonify
 from flask_json import FlaskJSON
 from flask_cors import CORS
 from config import config
 from service.push_notification import PushNotification
 import os
 import json
+
 
 vapid_public_key = os.getenv("VAPID_PUBLIC_KEY")
 
@@ -23,7 +24,9 @@ def create_app(config_name):
     @app.route("/notifications", methods=['POST', 'GET'])
     def calendar_notifications():
         PushNotification().send_notifications_to_subscribers()
-        return PushNotification.send_notifications(PushNotification)
+        result = PushNotification.send_notifications(PushNotification)
+        return result
+
 
     @app.route("/channels", methods=['POST', 'GET'])
     def create_channels():
