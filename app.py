@@ -6,7 +6,6 @@ from config import config
 from api.v1 import api_v1
 from api.v2 import api_v2
 
-
 def create_app(config_name):
     app = Flask(__name__)
     CORS(app)
@@ -15,4 +14,5 @@ def create_app(config_name):
     config[config_name].init_app(app)
     app.register_blueprint(api_v1)
     app.register_blueprint(api_v2)
+        
     return app
