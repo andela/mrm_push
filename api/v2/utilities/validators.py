@@ -4,8 +4,6 @@ from cerberus import Validator
 from validator_collection import checkers
 from flask import request, jsonify, make_response
 
-from api.v2.helpers.credentials import check_bouquet_credentials
-
 
 def validate_bouquet_adding(func):
     """Decorator to validate the addition of a bouquet"""
@@ -39,3 +37,15 @@ def validate_bouquet_adding(func):
                 return make_response(jsonify({'error': 'failed to add bouquet'}), 500)
         return func()
     return wrapper
+
+
+# Function to validate channel data
+def validate_calendar_info(data):
+    schema = {
+        'calendar_id': {'type': 'string', 'required': True},
+        'bouquet_id': {'type': 'integer', 'required': True},
+    }
+    check_data = Validator(schema)
+    check_data.validate(data)
+
+    return check_data

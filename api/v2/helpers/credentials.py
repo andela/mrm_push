@@ -1,14 +1,8 @@
 from __future__ import print_function
 
-import datetime
-import os.path
-import json
-
-from flask import make_response, jsonify
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow, Flow
-from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 from api.v2.models.bouquets.bouquets_model import Bouquets
 
@@ -18,7 +12,7 @@ def check_bouquet_credentials(data):
     :param data:
     :return: service object and refresh_token
     """
-    SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+    SCOPES = ['https://www.googleapis.com/auth/calendar']
 
     # Check if client_secret exists in the db
     _bouquet = Bouquets.query.filter_by(client_secret=data['client_secret']).first()

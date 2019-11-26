@@ -1,4 +1,5 @@
 from sqlalchemy import (Column, String, Enum, Sequence, Boolean, Integer)
+from sqlalchemy.orm import relationship
 
 from api.v2.helpers.database import Base
 from api.v2.utilities.utility import Utility, StateType
@@ -17,6 +18,7 @@ class Bouquets(Base, Utility):
     token_uri = Column(String, nullable=False)
     auth_uri = Column(String, nullable=False)
     state = Column(Enum(StateType), nullable=False, default="active")
+    channels = relationship('Channels')
 
     def __init__(self, **kwargs):
         self.bouquet_name = kwargs['bouquet_name']
