@@ -49,12 +49,11 @@ class Bouquets(Base, Utility):
         bouquet = Bouquets(**kwargs)
         bouquet.save()
 
-        # TODO: add functionality to add a bouquet on the bouquet table
-
     def delete_bouquet(self, bouquet_id):
         """Method for deleting a bouquet"""
 
-        # TODO: add functionality to remove a listed bouquet from the bouquet table
+        result = self.query.filter_by(id=bouquet_id).first()
+        self.delete(result) 
 
     def add_calendar_to_bouquet(self, calendar_id, bouquet_id):
         """Method for adding a calendar to a bouquet"""

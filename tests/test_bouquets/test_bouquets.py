@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from tests.base import BaseTestCase
 
+from api.v2.controllers.bouquets.bouquets_controller import Bouquets
 
 class TestBouquets(BaseTestCase):
     def test_get_all_bouquets(self):
@@ -55,3 +56,21 @@ class TestBouquets(BaseTestCase):
 
         self.assertEqual(response.status_code, 500)
         self.assertEqual(re['error'], 'failed to add bouquet')
+        
+    def test_delete_bouquet(self):
+        # Should return 404 when a bouquets is not found
+        response = self.app_test.delete("/v2/bouquets?bouquet_id=100")
+        self.assertTrue(b"The bouquet you want to delete is not found" in response.data)
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_bouquet_correctly(self):
+        # Should return 200 when a bouquet was deleted
+        response = self.app_test.delete("/v2/bouquets?bouquet_id=1")
+        self.assertTrue(b"The bouquet was deleted successfully" in response.data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_delete_bouquet_with_invalid_id(self):
+        # Should return 400 when a bouquet_id is not integer
+        response = self.app_test.delete("/v2/bouquets?bouquet_id=mmm")
+        self.assertTrue(b"The bouquet id should be an integer. Try again" in response.data)
+        self.assertEqual(response.status_code, 400)
