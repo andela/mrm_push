@@ -1,6 +1,4 @@
-from sqlalchemy import (Column, String, Integer, Boolean, Enum)
-from sqlalchemy.schema import Sequence
-
+from sqlalchemy import (Column, String, Enum, Sequence, Boolean, Integer)
 
 from api.v2.helpers.database import Base
 from api.v2.utilities.utility import Utility, StateType
@@ -9,21 +7,25 @@ from api.v2.utilities.utility import Utility, StateType
 class Bouquets(Base, Utility):
     __tablename__ = 'bouquets'
     id = Column(Integer, Sequence('bouquet_id_seq', start=1, increment=1), primary_key=True) # noqa
-    bouquet_name = Column(String)
-    refresh_url = Column(String, nullable=False)
-    should_refresh = Column(Boolean, default=False)
-    api_key1 = Column(String, nullable=False)
-    api_key2 = Column(String, nullable=False)
-    auth_credentials = Column(String, nullable=False)
+    bouquet_name = Column(String, nullable=True)
+    refresh_url = Column(String, nullable=True, default="none")
+    should_refresh = Column(Boolean, nullable=True, default=False)
+    refresh_token = Column(String, nullable=False)
+    client_id = Column(String, nullable=False)
+    client_secret = Column(String, nullable=False)
+    redirect_uris = Column(String, nullable=False)
+    token_uri = Column(String, nullable=False)
+    auth_uri = Column(String, nullable=False)
     state = Column(Enum(StateType), nullable=False, default="active")
 
     def __init__(self, **kwargs):
         self.bouquet_name = kwargs['bouquet_name']
-        self.refresh_url = kwargs['refresh_url']
-        self.should_refresh = kwargs['should_refresh']
-        self.api_key1 = kwargs['api_key1']
-        self.api_key2 = kwargs['api_key2']
-        self.auth_credentials = kwargs['auth_credentials']
+        self.client_id = kwargs['client_id']
+        self.client_secret = kwargs['client_secret']
+        self.redirect_uris = kwargs['redirect_uris']
+        self.auth_uri = kwargs['auth_uri']
+        self.token_uri = kwargs['token_uri']
+        self.refresh_token = kwargs['refresh_token']
 
     def refresh_channels(self):
         """Method for refreshing channels"""
@@ -40,8 +42,12 @@ class Bouquets(Base, Utility):
 
         # TODO: add functionality to receive calendar notifications for purposes of logging them on the relay log table
 
-    def add_bouquet(self, bouquet_id):
+    @staticmethod
+    def add_bouquet(**kwargs):
         """Method for adding a bouquet"""
+
+        bouquet = Bouquets(**kwargs)
+        bouquet.save()
 
         # TODO: add functionality to add a bouquet on the bouquet table
 
