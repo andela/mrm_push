@@ -129,6 +129,13 @@ class PushNotification():
             "type": "web_hook",
             "address": notification_url
         }
+
+        staging_request_body = {
+            "id": None,
+            "type": "web_hook",
+            "address": os.getenv("DEV_NOTIFICATION_URL")
+        }
+
         service = Credentials.set_api_credentials(self)
         calendar = {}
         calendars = []
@@ -151,6 +158,11 @@ class PushNotification():
                 channel = service.events().watch(
                     calendarId=calendar['calendar_id'],
                     body=request_body).execute()
+
+                _stanging_channel = service.events().watch(
+                    calendarId=calendar['calendar_id'],
+                    body=staging_request_body).execute()
+
             except errors.HttpError as error:
                 print('An error occurred', error)
                 continue
