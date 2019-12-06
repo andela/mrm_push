@@ -24,6 +24,7 @@ vapid_private_key = os.getenv("VAPID_PRIVATE_KEY")
 vapid_email = os.getenv("VAPID_EMAIL")
 
 notification_url = config.get(config_name).NOTIFICATION_URL
+staging_notification_url = config.get(config_name).DEV_NOTIFICATION_URL
 url = config.get(config_name).CONVERGE_MRM_URL
 app = Flask(__name__)
 
@@ -129,6 +130,13 @@ class PushNotification():
             "type": "web_hook",
             "address": notification_url
         }
+
+        staging_request_body = {
+            "id": None,
+            "type": "web_hook",
+            "address": staging_notification_url
+        }
+
         service = Credentials.set_api_credentials(self)
         calendar = {}
         calendars = []
@@ -151,6 +159,11 @@ class PushNotification():
                 channel = service.events().watch(
                     calendarId=calendar['calendar_id'],
                     body=request_body).execute()
+
+                _stanging_channel = service.events().watch(
+                    calendarId=calendar['calendar_id'],
+                    body=staging_request_body).execute()
+
             except errors.HttpError as error:
                 print('An error occurred', error)
                 continue
