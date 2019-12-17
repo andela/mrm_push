@@ -1,5 +1,5 @@
 from api.v2.models.channels.channels_model import Channels as ChannelsModel
-from api.v2.models.channels.channels_shema import ChannelsSchema
+from api.v2.models.channels.channels_schema import ChannelsSchema
 
 
 def query_all_channels():

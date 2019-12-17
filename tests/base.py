@@ -1,7 +1,6 @@
 import os
 import sys
 import datetime
-import json
 
 from flask_testing import TestCase
 from alembic import command, config
@@ -30,7 +29,6 @@ class BaseTestCase(TestCase):
             Base.metadata.create_all(bind=engine)
 
             command.stamp(self.alembic_configuration, 'head')
-            command.downgrade(self.alembic_configuration, '-1')
             command.upgrade(self.alembic_configuration, 'head')
 
             self.bouquet_201 = {
@@ -39,7 +37,8 @@ class BaseTestCase(TestCase):
                 'client_id': os.getenv('CLIENT_ID'),
                 'client_secret': os.getenv('CLIENT_SECRET'),
                 'refresh_token': os.getenv('REFRESH_TOKEN'),
-                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob', 'http://localhost'],
+                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob',
+                                  'http://localhost'],
                 'bouquet_name': 'Premium',
                 'should_refresh': True,
                 'refresh_url': 'https://regex101.com'
@@ -47,9 +46,11 @@ class BaseTestCase(TestCase):
 
             self.bouquet_201_return_data = {
                 'data': {
-                    'bouquet': {'auth_uri': 'https://h/o/oauth10/auth', 'bouquet_name': 'j', 'client_id': 'ug.apps',
+                    'bouquet': {'auth_uri': 'https://h/o/oauth10/auth',
+                                'bouquet_name': 'j', 'client_id': 'ug.apps',
                                 'client_secret': 'X381OMrnCepN7DQ8LozG9orw',
-                                'redirect_uris': 'urn:ietf:wg:oauth:2.0:oob http://localhost ',
+                                'redirect_uris':
+                                'urn:ietf:wg:oauth:2.0:oob http://localhost ',
                                 'refresh_url': 'Nonek',
                                 'should_refresh': False,
                                 'token_uri': 'https://d.com/token'
@@ -62,7 +63,8 @@ class BaseTestCase(TestCase):
                 'client_secret': os.getenv('CLIENT_SECRET'),
                 'refresh_token': os.getenv('REFRESH_TOKEN'),
                 'refresh_url': 'https://regex101.com',
-                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob', 'http://localhost']
+                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob',
+                                  'http://localhost']
             }
 
             self.bouquet_400_null_string = {
@@ -72,7 +74,8 @@ class BaseTestCase(TestCase):
                 'client_secret': os.getenv('CLIENT_SECRET'),
                 'refresh_token': os.getenv('REFRESH_TOKEN'),
                 'refresh_url': 'https://regex101.com',
-                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob', 'http://localhost'],
+                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob',
+                                  'http://localhost'],
                 'bouquet_name': ''
             }
 
@@ -83,7 +86,8 @@ class BaseTestCase(TestCase):
                 'client_secret': os.getenv('CLIENT_SECRET'),
                 'refresh_token': os.getenv('REFRESH_TOKEN'),
                 'refresh_url': 'https://regex101.com',
-                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob', 'http://localhost'],
+                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob',
+                                  'http://localhost'],
                 'bouquet_name': 78
             }
 
@@ -93,16 +97,18 @@ class BaseTestCase(TestCase):
                 'client_id': os.getenv('CLIENT_ID'),
                 'client_secret': os.getenv('CLIENT_SECRET'),
                 'refresh_token': os.getenv('REFRESH_TOKEN'),
-                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob', 'http://localhost'],
+                'redirect_uris': ['urn:ietf:wg:oauth:2.0:oob',
+                                  'http://localhost'],
                 'bouquet_name': 'Premium',
                 'should_refresh': True,
                 'refresh_url': 'https:m'
             }
 
-            channel = Channels(channel_id='calendar@id.com',
-                               calendar_id='calendar@id.com-djfirnfn',
-                               resource_id='9ty4bejkkw',
-                               extra_atrributes='t284nff94nf', bouquet_id=1)
+            channel = Channels(
+                    channel_id='1babe951eq0ru7d0e7r24fn2mm_R20191014T110000',
+                    calendar_id='emile.nsengimana@andela.com',
+                    resource_id='qwertyuioqwertyuioqwertyuioqwertyuio',
+                    extra_atrributes='t284nff94nf', bouquet_id=1)
 
             log = Logs(calendar_id=1,
                        subscriber_name='request',
@@ -122,8 +128,25 @@ class BaseTestCase(TestCase):
                 refresh_url='http://localhost:5000/refresh'
             )
 
+            bouquet_two = Bouquets(
+                auth_uri=os.getenv('AUTH_URI'),
+                token_uri=os.getenv('TOKEN_URI'),
+                client_id='invalid token',
+                client_secret=os.getenv('CLIENT_SECRET'),
+                refresh_token=os.getenv('REFRESH_TOKEN'),
+                redirect_uris='urn:ietf:wg:oauth:2.0:oob http://localhost',
+                bouquet_name='Premium',
+                should_refresh=True,
+                refresh_url='http://localhost:5000/refresh'
+            )
+
+            channel = Channels(channel_id="564dfg67jn56h7jh6",
+                               calendar_id="emilereas@gmail.com",
+                               resource_id="9ty4bejkkfvdw",
+                               extra_atrributes='t284nff94nf', bouquet_id=1)
             channel.save()
             bouquet.save()
+            bouquet_two.save()
             log.save()
 
             db_session.commit()
