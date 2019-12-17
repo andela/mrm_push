@@ -1,7 +1,7 @@
 from flask import make_response, jsonify, request
 from flask_restful import Resource
 
-from api.v2.helpers.bouquets.bouquets_helper import query_all_bouquets
+from api.v2.helpers.bouquets.bouquets_helper import query_all_bouquets, query_bouquet
 from api.v2.models.bouquets.bouquets_model import Bouquets as BouquetsModel
 from api.v2.utilities.validators import validate_bouquet_adding
 from api.v2.helpers.credentials import check_bouquet_credentials
@@ -33,3 +33,14 @@ class Bouquets(Resource):
                                   refresh_token=credentials['refresh_token'])
         return make_response(jsonify({'data': {'message': 'successfully added bouquet',
                                                'bouquet': data}}), 201)
+    
+    def delete(self):
+        bouquet_id = request.args['bouquet_id']
+        if not bouquet_id.isdigit():
+            return make_response(jsonify({'message': 'The bouquet id should be an integer. Try again'}), 400)
+        bouquet = query_bouquet(bouquet_id)
+        if not bouquet:
+            return make_response(jsonify({'message': 'The bouquet you want to delete is not found'}), 404)
+        BouquetsModel.delete_bouquet(BouquetsModel, bouquet_id)
+        return make_response(jsonify({'message': 'The bouquet was deleted successfully'}), 200)             
+        

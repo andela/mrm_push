@@ -9,3 +9,9 @@ def query_all_bouquets():
         bouquets = BouquetsSchema(many=True).dump(all_bouquets)
 
     return bouquets
+    
+def query_bouquet(bouquet_id):
+    bouquet = BouquetsModel.query.filter_by(id=bouquet_id).first()
+    if bouquet:
+        return BouquetsSchema(many=False).dump(bouquet)
+    return None
