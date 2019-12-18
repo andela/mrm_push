@@ -1,10 +1,10 @@
 from sqlalchemy import (Column, String, Integer, Enum, ForeignKey)
 from sqlalchemy.schema import Sequence
+from sqlalchemy.exc import IntegrityError
 
+from api.v2.helpers.database import db_session
 from api.v2.helpers.database import Base
 from api.v2.utilities.utility import Utility, StateType
-from sqlalchemy.exc import IntegrityError
-from api.v2.helpers.database import db_session
 
 
 class Channels(Base, Utility):
@@ -37,3 +37,12 @@ class Channels(Base, Utility):
             db_session.rollback()
 
         return channel_saved
+
+    @staticmethod
+    def update_channel(**kwargs):
+        channel = Channels.query.filter_by(calendar_id=kwargs['calendar_id']).first()
+        channel.channel_id = kwargs['channel_id']
+        channel.resource_id = kwargs['resource_id']
+        db_session.commit()
+
+        return channel

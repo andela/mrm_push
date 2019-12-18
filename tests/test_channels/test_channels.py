@@ -1,9 +1,11 @@
 from tests.base import BaseTestCase
-from api.v2.controllers.channels.channels_controller import Channels
+from api.v2.controllers.channels.channels_controller import (
+                                                        Channels,
+                                                        WatchChannels)
 from flask import json
 
 
-class TestChannels(BaseTestCase, Channels):
+class TestChannels(BaseTestCase, Channels, WatchChannels):
     def test_get_all_channels(self):
         response = self.app_test.get("/v2/channels")
 
@@ -61,3 +63,31 @@ class TestChannels(BaseTestCase, Channels):
     def test_no_request_channel(self):
         response = self.app_test.post("/v2/channels")
         self.assert500(response)
+
+    def test_register_bouquet_channels(self):
+        response = self.app_test.post("/v2/channels/register?bouquet_id=1",
+                                      content_type='application/json')
+        res = json.loads(response.data.decode())
+        self.assertEqual(res['error'], 'server error! please try again later')
+        self.assert_500(response)
+
+    def test_register_bouquet_channels_invalid_bouquet_id(self):
+        response = self.app_test.post("/v2/channels/register?bouquet_id=100",
+                                      content_type='application/json')
+        res = json.loads(response.data.decode())
+        self.assertEqual(res['error'], 'bouquet with id=100 doesn\'t exist')
+        self.assert_404(response)
+
+    def test_register_bouquet_with_no_channels(self):
+        response = self.app_test.post("/v2/channels/register?bouquet_id=2",
+                                      content_type='application/json')
+        res = json.loads(response.data.decode())
+        self.assertEqual(res['error'], 'no channels/calendars found in the provided bouquet')
+        self.assert_404(response)
+
+    def test_register_channels_with_invalid_bouquet_id(self):
+        response = self.app_test.post("/v2/channels/register?bouquet_id=abc",
+                                      content_type='application/json')
+        res = json.loads(response.data.decode())
+        self.assertEqual(res['error'], 'bouquet_id should be an integer')
+        self.assert_400(response)
