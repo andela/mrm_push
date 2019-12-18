@@ -9,6 +9,8 @@ from app import create_app
 from api.v2.helpers.database import engine, db_session, Base
 from api.v2.models.channels.channels_model import Channels
 from api.v2.models.bouquets.bouquets_model import Bouquets
+from api.v2.models.subscriber.subscriber_model import Subscribers
+from api.v2.models.subscription_method.subscription_method_model import Subscriptions
 from api.v2.models.logs.logs_model import Logs
 
 sys.path.append(os.getcwd())
@@ -144,10 +146,27 @@ class BaseTestCase(TestCase):
                                calendar_id="emilereas@gmail.com",
                                resource_id="9ty4bejkkfvdw",
                                extra_atrributes='t284nff94nf', bouquet_id=1)
+
+            channel_two = Channels(channel_id="564dfg67jn56h7jh6n",
+                               calendar_id="emilereasw@gmail.com",
+                               resource_id="9ty4bejkkfvdww",
+                               extra_atrributes='t284nff94nfn', bouquet_id=2)
+            
+            subscription = Subscriptions(name="compact")
+
+            subscriber = Subscribers(subscriber_name="Manzi",
+                               username="manzif6",
+                               password="password1",
+                               notification_url='https://notificati.com',
+                               subscription_method_id=1,
+                               bouquet_id=1)
+            subscription.save()
             channel.save()
+            channel_two.save()
             bouquet.save()
             bouquet_two.save()
             log.save()
+            subscriber.save()
 
             db_session.commit()
 
